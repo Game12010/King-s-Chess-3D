@@ -1,0 +1,2829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="fonts/fonts.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D First-Person Chess</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #111;
+            font-family: sans-serif;
+            user-select: none;
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* --- Bottom-Left Controls Overlay --- */
+        #controls-hint-card {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 40;
+            pointer-events: none;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(20, 20, 20, 0.85), rgba(10, 10, 10, 0.92));
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65), 0 0 15px rgba(212, 175, 55, 0.08);
+            font-family: 'Cinzel', serif;
+            color: #f0d9b5;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            max-width: 320px;
+        }
+
+        #controls-hint-card .controls-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #d4af37;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #controls-hint-card .controls-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            font-size: 0.74rem;
+            font-family: sans-serif;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .control-badges {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .key-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 18px;
+            height: 18px;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.7rem;
+            color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .key-badge.accent {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: rgba(212, 175, 55, 0.6);
+            color: #f0d9b5;
+        }
+
+        /* ==========================================
+           PAWN PROMOTION MENU
+           ========================================== */
+
+        #promotion-menu {
+            position: absolute;
+            inset: 0;
+            z-index: 80;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(5px);
+        }
+
+        #promotion-panel {
+            width: min(520px, 90vw);
+            padding: 28px 30px 32px 30px;
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(30, 30, 30, 0.97),
+                    rgba(12, 12, 12, 0.97)
+                );        
+            border: 1px solid rgba(212, 175, 55, 0.45);
+            border-radius: 18px;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.65),
+                0 0 30px rgba(212, 175, 55, 0.12);
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            animation: promotionPanelIn 0.22s ease-out;
+        }
+
+        @keyframes promotionPanelIn {
+            from {
+                opacity: 0;
+                transform: scale(0.92) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }        
+        }
+
+        #promotion-panel h2 {
+            margin: 0;
+            color: #ffffff;
+            font-size: clamp(1.6rem, 3vw, 2.3rem);
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.8);
+        }
+
+        #promotion-panel p {
+            margin: 8px 0 25px 0;
+            color: rgba(255, 255, 255, 0.65);
+            font-family: sans-serif;
+            font-size: 0.95rem;
+        }
+
+        #promotion-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+        }
+
+        .promotion-option {
+            min-height: 125px;
+            padding: 12px 8px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.055);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: 'Cinzel', serif;
+            transition:
+                transform 0.18s ease,
+                background 0.18s ease,
+                border-color 0.18s ease,
+                box-shadow 0.18s ease;
+        }
+
+        .promotion-option:hover,
+        .promotion-option:focus {
+            transform: translateY(-5px);
+            background: rgba(212, 175, 55, 0.16);
+            border-color: rgba(212, 175, 55, 0.8);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            outline: none;
+        }
+
+        .promotion-option:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        .promotion-piece {
+            width: 68px;
+            height: 68px;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6));
+        }
+
+        .promotion-name {
+            font-size: 0.9rem;
+            font-weight: bold;
+            letter-spacing: 0.04em;
+            color: #f0d9b5;
+        }
+
+        @media (max-width: 600px) {
+            #promotion-panel {
+                padding: 22px 16px 24px 16px;
+            }
+
+            #promotion-options {
+                gap: 8px;
+            }
+
+            .promotion-option {
+                min-height: 105px;
+                padding: 8px 4px;
+            }
+
+            .promotion-piece {
+                width: 52px;
+                height: 52px;
+            }
+
+            .promotion-name {
+                font-size: 0.72rem;
+            }
+        }
+
+        /* --- 2D Minimap Styles --- */
+        #minimap-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 240px;
+            height: 240px;
+            border: 4px solid #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            background-color: #b58863;
+            z-index: 20;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+        }
+
+        .minimap-square {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            background-size: 85%;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .minimap-square.light { background-color: #f0d9b5; }
+        .minimap-square.dark { background-color: #b58863; }
+
+        .minimap-highlight {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(20, 85, 30, 0.5);
+            pointer-events: none;
+        }
+
+        .minimap-move-indicator {
+            position: absolute;
+            width: 30%;
+            height: 30%;
+            background-color: rgba(0, 0, 0, 0.4);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .minimap-move-indicator.capture {
+            width: 70%;
+            height: 70%;
+            background-color: transparent;
+            border: 3px solid rgba(0, 0, 0, 0.4);
+        }
+
+        /* --- UI Screens --- */
+        /* ============================================================
+           GAME LOADING / LEAVING SCREEN
+           ============================================================ */
+
+        #loading-screen {
+            position: absolute;
+            inset: 0;
+            z-index: 99999;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+
+            background:
+                radial-gradient(
+                    circle at center,
+                    rgba(35, 35, 35, 0.96) 0%,
+                    rgba(8, 8, 8, 0.98) 70%,
+                    rgba(0, 0, 0, 1) 100%
+                );
+
+            color: white;
+            text-align: center;
+
+            opacity: 1;
+            visibility: visible;
+            pointer-events: all;
+
+            transition:
+                opacity 0.25s ease,
+                visibility 0.25s ease;
+        }
+
+        /* Chess piece */
+        
+        .loading-piece {
+            font-family: 'Cinzel', serif;
+            font-size: 5rem;
+            color: #d4af37;
+
+            text-shadow:
+                0 0 10px rgba(212, 175, 55, 0.35),
+                0 0 25px rgba(212, 175, 55, 0.18);
+
+            animation:
+                loadingPieceFloat 1.8s ease-in-out infinite,
+                loadingPieceGlow 1.8s ease-in-out infinite;
+        }
+
+        /* Main loading text */
+
+        .loading-title {
+            margin-top: 18px;
+
+            font-family: 'Cinzel', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+
+            color: #ffffff;
+
+            text-shadow:
+                2px 2px 5px rgba(0, 0, 0, 0.9);
+        }
+
+        /* Subtitle */
+
+        .loading-subtitle {
+            margin-top: 8px;
+
+            font-family: sans-serif;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+
+            color: #999999;
+        }
+
+        /* Animated loading line */
+
+        .loading-bar {
+            width: 220px;
+            height: 3px;
+
+            margin-top: 25px;
+
+            overflow: hidden;
+
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+        }
+
+        .loading-bar::before {
+            content: '';
+
+            display: block;
+
+            width: 45%;
+            height: 100%;
+
+            background: #d4af37;
+            border-radius: 10px;
+
+            box-shadow:
+                0 0 8px rgba(212, 175, 55, 0.6),
+                0 0 16px rgba(212, 175, 55, 0.25);
+
+            animation: loadingBar 1.15s ease-in-out infinite;
+        }
+
+        @keyframes loadingPieceFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        @keyframes loadingPieceGlow {
+
+            0%,
+            100% {
+                opacity: 0.75;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes loadingBar {
+        
+            0% {
+                transform: translateX(-120%);
+            }
+
+            50% {
+                transform: translateX(100%);
+            }
+
+            100% {
+                transform: translateX(480%);
+            }
+        }
+
+
+        /* ============================================================
+           GAME OVER SCREEN
+           ============================================================ */
+
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+
+            background-color: rgba(0, 0, 0, 0.9);
+
+            z-index: 100;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+
+            color: white;
+            text-align: center;
+        }
+
+        #game-over-screen {
+            display: none;
+        }
+
+        #game-over-screen h1 {
+            font-size: 3rem;
+            margin: 0 0 10px 0;
+            color: #f0d9b5;
+        }
+
+        #game-result {
+            font-size: 1.5rem;
+            margin: 0 0 30px 0;
+        }
+
+        .btn {
+            background-color: #b58863;
+            color: white; border: none; padding: 12px 24px;
+            margin: 10px; font-size: 1.2rem; cursor: pointer;
+            border-radius: 5px; transition: 0.2s; font-family: inherit; font-weight: bold;
+        }
+
+        .btn:hover { background-color: #f0d9b5; color: #1e1e1e; }
+
+        /* --- Pause Menu Overlay --- */
+
+        /* --- Pause Button --- */
+        #pause-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            padding-bottom: 3px;
+            margin: 0;
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 10px;
+            background: rgba(20,20,20,0.75);
+            color: white;
+            font-size: 1.35rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 30; /* Ensures it stays on top of the 3D canvas */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+            transition: 0.15s;
+            line-height: 1;
+        }
+
+        #pause-button:hover {
+            background: rgba(181,136,99,0.95);
+            transform: scale(1.05);
+        }
+
+        #pause-button:active {
+            transform: scale(0.96);
+        }
+
+        #pause-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75); /* Dark transparent background, no image */
+            z-index: 90;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        #pause-menu h1 {
+            margin: 0 0 40px 0;
+            font-size: 3.5rem;
+            font-family: 'Cinzel', serif;
+            color: #ffffff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        #pause-menu .pause-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* --- Stylized Pause Menu Buttons --- */
+        #pause-menu .btn {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            padding: 10px 20px;
+            position: relative;
+            transition: all 0.2s ease;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            outline: none;
+            min-width: auto; /* Overrides previous btn limits */
+            transform-origin: center center;
+        }        
+
+        /* Hover States (Removed translateX so it stays centered) */
+        #pause-menu .btn:hover,
+        #pause-menu .btn:focus {
+            color: #d4af37;
+            background: transparent;
+            transform: scale(1.05); 
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 1);
+        }
+
+        /* Indicator arrow for active selection */
+        #pause-menu .btn::before {
+            content: '♞';
+            position: absolute;
+            left: -40px;
+            opacity: 0;
+            color: #d4af37;
+            transition: opacity 0.2s ease;
+            font-size: 1.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        #pause-menu .btn:hover::before,
+        #pause-menu .btn:focus::before {
+            opacity: 1;
+        }
+
+        /* --- Controller Cursor --- */
+        #controller-cursor {
+            position: fixed;
+            left: 50vw;
+            top: 50vh;
+            width: 22px;
+            height: 22px;
+            border: 2px solid rgba(255,255,255,0.95);
+            border-radius: 50%;
+            box-sizing: border-box;
+            pointer-events: none;
+            z-index: 100000;
+            display: none;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 0 1px rgba(212,175,55,0.35), 0 0 14px rgba(212,175,55,0.45);
+            transition: transform 0.08s ease-out, opacity 0.15s ease;
+        }
+
+        #controller-cursor::before,
+        #controller-cursor::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            background: rgba(212,175,55,0.9);
+            transform: translate(-50%, -50%);
+            border-radius: 2px;
+        }
+
+        #controller-cursor::before {
+            width: 5px;
+            height: 5px;
+        }
+
+        #controller-cursor::after {
+            width: 32px;
+            height: 1px;
+            box-shadow: -15px 0 rgba(212,175,55,0.35), 15px 0 rgba(212,175,55,0.35);
+        }
+
+        /* --- Camera Notification --- */
+        #camera-notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.85);
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+            pointer-events: none; /* Prevents it from blocking clicks */
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+
+    <script src="libs/three.min.js"></script>
+    <script src="libs/GLTFLoader.js"></script>
+    <script src="libs/DRACOLoader.js"></script>
+    <script src="libs/RGBELoader.js"></script>
+    <script src="libs/chess.min.js"></script>
+</head>
+<body>
+
+    <div id="camera-notification"></div>
+    <div id="controller-cursor" aria-hidden="true"></div>
+
+    <div id="loading-screen">
+
+        <div class="loading-piece">♞</div>
+
+        <div class="loading-title" id="loading-title">
+            LOADING GAME
+        </div>
+
+        <div class="loading-subtitle" id="loading-subtitle">
+            Preparing the chessboard...
+        </div>
+
+        <div class="loading-bar"></div>
+
+    </div>
+
+    <div id="game-container"></div>
+    <div id="minimap-container"></div>
+
+    <button id="pause-button" aria-label="Pause" title="Pause">⏸</button>
+
+    <div id="pause-menu">
+        <h1>Paused</h1>
+
+        <div class="pause-actions">
+            <button class="btn" id="resume-btn">Resume</button>
+            <button class="btn" id="restart-btn">Restart</button>
+            <button class="btn" id="pause-main-menu-btn">Main Menu</button>
+        </div>
+    </div>
+
+    <!-- Pawn Promotion Menu -->
+    <div id="promotion-menu">
+        <div id="promotion-panel">
+            <h2>Choose Promotion</h2>
+            <p>Select the piece you want your pawn to become.</p>
+
+            <div id="promotion-options">
+
+                <button class="promotion-option" data-piece="q">
+                    <div
+                        class="promotion-piece"
+                        id="promotion-queen"
+                    ></div>
+                    <div class="promotion-name">Queen</div>
+                </button>
+
+                <button class="promotion-option" data-piece="r">
+                    <div
+                        class="promotion-piece"
+                        id="promotion-rook"
+                    ></div>
+                    <div class="promotion-name">Rook</div>
+                </button>
+
+                <button class="promotion-option" data-piece="b">
+                    <div
+                        class="promotion-piece"
+                        id="promotion-bishop"
+                    ></div>
+                    <div class="promotion-name">Bishop</div>
+                </button>
+
+                <button class="promotion-option" data-piece="n">
+                    <div
+                        class="promotion-piece"
+                        id="promotion-knight"
+                    ></div>
+                    <div class="promotion-name">Knight</div>
+                </button>
+
+            </div>
+        </div>
+    </div>
+    <!-- --- Bottom-Left Controls Overlay --- -->
+    <div id="controls-hint-card">
+        <div class="controls-title">Controls</div>
+        <div class="controls-list">
+            <div class="control-row">
+                <span>Toggle Camera Mode</span>
+                <div class="control-badges">
+                    <span class="key-badge accent">Shift</span>
+                </div>
+            </div>
+            <div class="control-row">
+                <span id="camera-mode-hint">Press Shift to set camera to free roam</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over-screen">
+        <h1>Game Over</h1>
+        <h2 id="game-result">White Won</h2>
+        <div>
+            <button class="btn" id="play-again-btn">Play Again</button>
+            <button class="btn" id="game-over-main-menu-btn">
+                Main Menu
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Disable Right-Click Menu
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+
+
+        // ==========================================
+        // 1. GAME CONFIGURATION & LOGIC SETUP
+        // ==========================================
+        let config = { difficulty: "Easy", player: "White" };
+        try {
+            const savedConfig = localStorage.getItem('game.json');
+            if (savedConfig) {
+                const parsed = JSON.parse(savedConfig);
+                config.difficulty = parsed.difficulty || config.difficulty;
+                config.player = parsed.player || config.player;
+            }
+        } catch (e) {}
+
+        const chess = new Chess();
+        let sf = null;
+        let isAiThinking = false;
+        let isAnimating = false;
+        let isPaused = false;
+        let pauseSwitchTimer = null;
+        let aiMoveTimer = null;
+        let pendingAIMove = null;
+        let pendingPromotionMove = null;
+
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+        // ==========================================
+        // 2. THREE.JS 3D ENVIRONMENT SETUP
+        // ==========================================
+        const container = document.getElementById('game-container');
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.rotation.order = 'YXZ';
+        let cameraYaw = 0;
+        let cameraPitch = 0;
+
+        // ==========================================
+        // CONTROLLER SUPPORT (UP TO 4 CONTROLLERS)
+        // ==========================================
+        const controllerState = Array.from({ length: 4 }, () => ({
+            a: false, b: false, l3: false,
+            cursorX: 0, cursorY: 0,
+            pauseVerticalLatch: 0,
+            pauseHorizontalLatch: 0
+        }));
+
+        const CONTROLLER_DEADZONE = 0.16;
+        const CURSOR_SPEED = 900;
+        const CONTROLLER_LOOK_SPEED = 1.2;
+        const CONTROLLER_VERTICAL_SPEED = 4.5;
+        const CONTROLLER_DPAD_SPEED = 5.0;
+        let controllerCursorX = window.innerWidth / 2;
+        let controllerCursorY = window.innerHeight / 2;
+        let controllerConnected = false;
+
+        function applyDeadzone(value) {
+            if (Math.abs(value) < CONTROLLER_DEADZONE) return 0;
+            const sign = Math.sign(value);
+            const magnitude = (Math.abs(value) - CONTROLLER_DEADZONE) / (1 - CONTROLLER_DEADZONE);
+            return sign * magnitude;
+        }
+
+        function getGamepads() {
+            const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+            return Array.from({ length: 4 }, (_, i) => pads[i] || null);
+        }
+
+        function setControllerCursorVisible(visible) {
+            const cursor = document.getElementById('controller-cursor');
+            if (cursor) cursor.style.display = visible ? 'block' : 'none';
+        }
+
+        function updateControllerCursorElement() {
+            const cursor = document.getElementById('controller-cursor');
+            if (!cursor) return;
+            cursor.style.left = controllerCursorX + 'px';
+            cursor.style.top = controllerCursorY + 'px';
+        }
+
+        function controllerClickAtCursor() {
+            if (isLeavingGame) return;
+
+            const element = document.elementFromPoint(controllerCursorX, controllerCursorY);
+            if (!element) return;
+
+            // 1. If pointing at 2D UI elements (Minimap, Pause, Promotion Buttons)
+            const uiTarget = element.closest('#minimap-container, .minimap-square, #pause-button, #promotion-menu, #pause-menu, button, .btn, .promotion-option');
+            if (uiTarget) {
+                uiTarget.click();
+                return;
+            }
+
+            // 2. Otherwise, Raycast onto the 3D Chessboard at cursor coordinates
+            if (
+                isPaused ||
+                pendingPromotionMove ||
+                chess.game_over() ||
+                isAiThinking ||
+                isAnimating
+            ) return;
+
+            if (config.difficulty !== "2_Player") {
+                const isWhiteTurn = chess.turn() === 'w';
+                if ((config.player === "White") !== isWhiteTurn) return;
+            }
+
+            const pointer = new THREE.Vector2();
+            pointer.x = (controllerCursorX / window.innerWidth) * 2 - 1;
+            pointer.y = -(controllerCursorY / window.innerHeight) * 2 + 1;
+        
+            raycaster.setFromCamera(pointer, camera);
+            const intersects = raycaster.intersectObjects(Object.values(squareMeshes));
+
+            if (intersects.length > 0) {
+                handleSquareClick(intersects[0].object.userData.square);
+            }
+        }
+        
+        function movePauseSelection(direction) {
+            if (!isPaused) return;
+            const buttons = Array.from(document.querySelectorAll('#pause-menu .btn'));
+            if (!buttons.length) return;
+
+            let index = buttons.indexOf(document.activeElement);
+            if (index < 0) index = 0;
+            index += direction;
+            if (index < 0) index = buttons.length - 1;
+            if (index >= buttons.length) index = 0;
+            buttons[index].focus();
+        }
+
+        // ==========================================
+        // CONTROLLER INPUT LOOP (RT / LT + A CLICK)
+        // ==========================================
+        function updateControllerInput(delta) {
+            const pads = getGamepads();
+            controllerConnected = pads.some(Boolean);
+            setControllerCursorVisible(controllerConnected && !isPaused && !pendingPromotionMove && !chess.game_over());
+
+            let cursorDX = 0;
+            let cursorDY = 0;
+            let lookX = 0;
+            let lookY = 0;
+            let dpadX = 0;
+            let dpadY = 0;
+            let moveUp = 0;
+            let moveDown = 0;
+
+            pads.forEach((pad, index) => {
+                if (!pad) {
+                    controllerState[index].a = false;
+                    controllerState[index].b = false;
+                    controllerState[index].l3 = false;
+                    return;
+                }
+
+                const state = controllerState[index];
+                const a = !!pad.buttons[0]?.pressed;
+                const b = !!pad.buttons[1]?.pressed;
+                const l3 = !!pad.buttons[10]?.pressed;
+
+                // A Button = Click
+                if (a && !state.a) {
+                    if (isPaused) {
+                        const focused = document.activeElement;
+                        if (focused && focused.classList.contains('btn')) focused.click();
+                        else document.getElementById('resume-btn')?.click();
+                    } else if (pendingPromotionMove) {
+                        const focused = document.activeElement;
+                        if (focused && focused.classList.contains('promotion-option')) focused.click();
+                    } else {
+                        controllerClickAtCursor();
+                    }
+                }
+
+                // B Button = Pause / Resume
+                if (b && !state.b && !pendingPromotionMove && !chess.game_over()) {
+                    if (isPaused) closePauseMenu();
+                    else openPauseMenu();
+                }
+
+                // L3 (Left Stick Click) = Toggle Free-Roam / Locked Camera
+                if (l3 && !state.l3 && !isPaused && !pendingPromotionMove && !chess.game_over()) {
+                    toggleFreeCamera();
+                }
+
+                state.a = a;
+                state.b = b;
+                state.l3 = l3;
+
+                const lx = applyDeadzone(pad.axes[0] || 0);
+                const ly = applyDeadzone(pad.axes[1] || 0);
+                const rx = applyDeadzone(pad.axes[2] || 0);
+                const ry = applyDeadzone(pad.axes[3] || 0);
+
+                if (isPaused) {
+                    if (Math.abs(ly) > 0.35) {
+                        if (state.pauseVerticalLatch === 0) {
+                            movePauseSelection(ly > 0 ? 1 : -1);
+                            state.pauseVerticalLatch = ly > 0 ? 1 : -1;
+                        }
+                    } else {
+                        state.pauseVerticalLatch = 0;
+                    }
+                } else {
+                    // Left Stick = In-Game Cursor
+                    cursorDX += lx;
+                    cursorDY += ly;
+                }
+
+                // Right Stick = Look / Camera Pitch & Yaw
+                lookX += rx;
+                lookY += ry;
+
+                // D-Pad = Horizontal Movement in Free-Roam
+                const up = !!pad.buttons[12]?.pressed;
+                const down = !!pad.buttons[13]?.pressed;
+                const left = !!pad.buttons[14]?.pressed;
+                const right = !!pad.buttons[15]?.pressed;
+                if (up) dpadY -= 1;
+                if (down) dpadY += 1;
+                if (left) dpadX -= 1;
+                if (right) dpadX += 1;
+
+                // RT (Button 7) = Camera Up (Spacebar equivalent)
+                // LT (Button 6) = Camera Down (Ctrl equivalent)
+                const rt = typeof pad.buttons[7] === 'object' ? pad.buttons[7].value : (pad.buttons[7] ? 1 : 0);
+                const lt = typeof pad.buttons[6] === 'object' ? pad.buttons[6].value : (pad.buttons[6] ? 1 : 0);
+                if (rt > 0.1) moveUp += rt;
+                if (lt > 0.1) moveDown += lt;
+            });
+
+            if (!isPaused && !pendingPromotionMove && !chess.game_over()) {
+                // Update Cursor Position
+                if (cursorDX !== 0 || cursorDY !== 0) {
+                    const length = Math.hypot(cursorDX, cursorDY);
+                    if (length > 1) { cursorDX /= length; cursorDY /= length; }
+                    controllerCursorX += cursorDX * CURSOR_SPEED * delta;
+                    controllerCursorY += cursorDY * CURSOR_SPEED * delta;
+                    controllerCursorX = Math.max(0, Math.min(window.innerWidth, controllerCursorX));
+                    controllerCursorY = Math.max(0, Math.min(window.innerHeight, controllerCursorY));
+                    updateControllerCursorElement();
+                }
+
+                // Camera Look
+                cameraYaw -= lookX * CONTROLLER_LOOK_SPEED * delta;
+                cameraPitch -= lookY * CONTROLLER_LOOK_SPEED * delta;
+                cameraPitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, cameraPitch));
+                camera.rotation.set(cameraPitch, cameraYaw, 0);
+
+                // Free Roam Movement with D-Pad & Triggers
+                if (isFreeCamera) {
+                    const move = new THREE.Vector3();
+                    const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+                    const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+                    if (dpadY < 0) move.add(forward);
+                    if (dpadY > 0) move.sub(forward);
+                    if (dpadX > 0) move.add(right);
+                    if (dpadX < 0) move.sub(right);
+                    if (move.lengthSq() > 0) {
+                        camera.position.add(move.normalize().multiplyScalar(CONTROLLER_DPAD_SPEED * delta));
+                    }
+
+                    // RT moves UP, LT moves DOWN
+                    if (moveUp > 0) camera.position.y += Math.min(moveUp, 1) * CONTROLLER_VERTICAL_SPEED * delta;
+                    if (moveDown > 0) camera.position.y -= Math.min(moveDown, 1) * CONTROLLER_VERTICAL_SPEED * delta;
+
+                    const minimumCameraY = BOARD_Y + 0.25;
+                    if (camera.position.y < minimumCameraY) camera.position.y = minimumCameraY;
+                }
+            }
+        }
+
+        window.addEventListener('gamepadconnected', () => {
+            controllerConnected = true;
+            setControllerCursorVisible(!isPaused && !pendingPromotionMove && !chess.game_over());
+            updateControllerCursorElement();
+        });
+
+        window.addEventListener('gamepaddisconnected', () => {
+            controllerConnected = getGamepads().some(Boolean);
+            if (!controllerConnected) setControllerCursorVisible(false);
+        });
+
+
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        // Main directional light to illuminate the pieces and board texture
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        mainLight.position.set(5, 8, 5);
+        scene.add(mainLight);
+
+        // Fill light from the opposite side to softly reveal details on black pieces
+        const fillLight = new THREE.DirectionalLight(0x88bbff, 0.35);
+        fillLight.position.set(-5, 4, -5);
+        scene.add(fillLight);
+
+        // ==========================================
+        // 3. ASSET LOADING (HDR & GLB)
+        // ==========================================
+        const assetMap = {};
+        const piecesList = ['wp', 'wn', 'wb', 'wr', 'wq', 'wk', 'bp', 'bn', 'bb', 'br', 'bq', 'bk'];
+
+        async function loadAssets() {
+            const gltfLoader = new THREE.GLTFLoader();
+            const dracoLoader = new THREE.DRACOLoader();
+            dracoLoader.setDecoderPath('libs/draco/');
+            dracoLoader.setDecoderConfig({ type: 'js' });
+            gltfLoader.setDRACOLoader(dracoLoader);
+            
+            try {
+                // Set solid black background
+                scene.background = new THREE.Color(0x000000);
+
+                // ==========================================
+                // LOAD CHESS PIECE MODELS
+                // ==========================================
+                let cp = parseInt(localStorage.getItem('cp'), 10);
+                if (![1, 2, 3].includes(cp)) {
+                    cp = 2;
+                    localStorage.setItem('cp', cp);
+                }
+
+                let pieceFolder;
+                if (cp === 1) {
+                    pieceFolder = 'assets/Chess Piece 1K';
+                } else if (cp === 2) {
+                    pieceFolder = 'assets/Chess Piece 1K';
+                } else {
+                    pieceFolder = 'assets/Chess Piece 1K';
+                }
+
+                const loadPromises = piecesList.map(p =>
+                    new Promise((res, rej) =>
+                        gltfLoader.load(
+                            `${pieceFolder}/${p}.glb`,
+                            res,
+                            undefined,
+                            rej
+                        )
+                    )
+                );
+
+                const loadedGltfs = await Promise.all(loadPromises);
+
+                loadedGltfs.forEach((gltf, index) => {
+                    const model = gltf.scene;
+
+                    const box = new THREE.Box3().setFromObject(model);
+                    const size = box.getSize(new THREE.Vector3());
+                    const center = box.getCenter(new THREE.Vector3());
+
+                    model.position.x += (model.position.x - center.x);
+                    model.position.z += (model.position.z - center.z);
+                    model.position.y -= box.min.y;
+
+                    const maxDim = Math.max(size.x, size.z);
+                    const scale = 0.875 / maxDim;
+
+                    model.scale.set(scale, scale, scale);
+                
+                    assetMap[piecesList[index]] = model;
+                });
+
+                const loadingScreen = document.getElementById('loading-screen');
+                loadingScreen.style.opacity = '0';
+                loadingScreen.style.visibility = 'hidden';
+                loadingScreen.style.pointerEvents = 'none';
+                
+                initBoard();
+                initMinimap();
+                initPieces();
+                if (config.difficulty !== "2_Player" && config.player === "Black") triggerAIMove();
+
+            } catch (err) {
+                console.error("Failed to load assets:", err);
+                alert("Error loading assets. Ensure GLB files are in the 'assets' folder.");
+            }
+        }
+
+        // ==========================================
+        // 4. BOARD, MINIMAP, & LOGIC SYNC
+        // ==========================================
+        const boardGroup = new THREE.Group();
+        scene.add(boardGroup);
+
+        const squareMeshes = {};
+        const pieceMeshes = {};
+        const minimapSquares = {};
+        const highlight3DMeshes = [];
+
+        let selectedSquare = null;
+        let validMoves = [];
+
+        const pieceSound = new Audio('assets/peice.mp3');
+        const gameOverSound = new Audio('assets/game_over.mp3');
+        const checkSound = new Audio('assets/check.mp3');
+
+        // Larger board, positioned lower so it sits more naturally on a table.
+        const BOARD_SIZE = 1.25;
+        const BOARD_Y = -0.30;
+        const PIECE_Y = -0.245;
+
+        function getSquarePosition(sq) {
+            const f = sq.charCodeAt(0) - 97;
+            const r = parseInt(sq[1]) - 1;
+            return new THREE.Vector3(
+                (f - 3.5) * BOARD_SIZE,
+                BOARD_Y,
+                (3.5 - r) * BOARD_SIZE
+            );
+        }
+
+        function initBoard() {
+            const squareGeo = new THREE.BoxGeometry(
+                BOARD_SIZE,
+                0.14,
+                BOARD_SIZE
+            );
+
+            // ==========================================
+            // LOAD CHESSBOARD TEXTURES & PBR MAPS
+            // ==========================================
+            const textureLoader = new THREE.TextureLoader();
+
+            let bt = parseInt(localStorage.getItem('bt'), 10);
+            if (![1, 2, 3, 4].includes(bt)) {
+                bt = 2;
+                localStorage.setItem('bt', bt);
+            }
+
+            let boardTextureFolder;
+            if (bt === 1) boardTextureFolder = 'High';
+            else if (bt === 2) boardTextureFolder = 'High';
+            else if (bt === 3) boardTextureFolder = 'High';
+            else boardTextureFolder = 'High';
+
+            const basePath = `assets/Chess Texture/${boardTextureFolder}`;
+
+            function configureTexture(tex, isColor = false) {
+                tex.wrapS = THREE.ClampToEdgeWrapping;
+                tex.wrapT = THREE.ClampToEdgeWrapping;
+                if (isColor) {
+                    tex.encoding = THREE.sRGBEncoding;
+                }
+                tex.needsUpdate = true;
+                return tex;
+            }
+
+            const whiteBaseColor = configureTexture(
+                textureLoader.load(`${basePath}/white_basecolor.png`),
+                true
+            );
+            const whiteNormal = configureTexture(
+                textureLoader.load(`${basePath}/white_normal.png`)
+            );
+            const whiteRoughness = configureTexture(
+                textureLoader.load(`${basePath}/white_roughness.png`)
+            );
+            const whiteDisplacement = configureTexture(
+                textureLoader.load(`${basePath}/white_height.png`)
+            );
+
+            const blackBaseColor = configureTexture(
+                textureLoader.load(`${basePath}/black_basecolor.png`),
+                true
+            );
+            const blackNormal = configureTexture(
+                textureLoader.load(`${basePath}/black_normal.png`)
+            );
+            const blackRoughness = configureTexture(
+                textureLoader.load(`${basePath}/black_roughness.png`)
+            );
+            const blackDisplacement = configureTexture(
+                textureLoader.load(`${basePath}/black_height.png`)
+            );
+
+            const lightMat = new THREE.MeshStandardMaterial({
+                map: whiteBaseColor,
+                normalMap: whiteNormal,
+                normalScale: new THREE.Vector2(1.0, 1.0),
+                roughnessMap: whiteRoughness,
+                roughness: 1.0,
+                displacementMap: whiteDisplacement,
+                displacementScale: 0.005,
+                metalness: 0.05
+            });
+
+            const darkMat = new THREE.MeshStandardMaterial({
+                map: blackBaseColor,
+                normalMap: blackNormal,
+                normalScale: new THREE.Vector2(1.0, 1.0),
+                roughnessMap: blackRoughness,
+                roughness: 1.0,
+                displacementMap: blackDisplacement,
+                displacementScale: 0.005,
+                metalness: 0.05
+            });
+
+            files.forEach((file, fIndex) => {
+                ranks.forEach((rank, rIndex) => {
+                    const sqId = file + rank;
+                    const isLight = (fIndex + rIndex) % 2 !== 0;
+
+                    const mesh = new THREE.Mesh(
+                        squareGeo,
+                        isLight ? lightMat.clone() : darkMat.clone()
+                    );
+
+                    mesh.position.copy(getSquarePosition(sqId));
+                    mesh.userData = {
+                        square: sqId,
+                        isLight: isLight
+                    };
+
+                    boardGroup.add(mesh);
+                    squareMeshes[sqId] = mesh;
+                });
+            });
+
+            const BORDER_WIDTH = 0.50;
+            const BORDER_HEIGHT = 0.35;
+            const OUTER_BOARD_SIZE = BOARD_SIZE * 8 + BORDER_WIDTH * 2;
+
+            const boardBaseGeo = new THREE.BoxGeometry(
+                OUTER_BOARD_SIZE,
+                BORDER_HEIGHT,
+                OUTER_BOARD_SIZE
+            );
+
+            const boardBaseMat = new THREE.MeshStandardMaterial({
+                map: blackBaseColor,
+                normalMap: blackNormal,
+                normalScale: new THREE.Vector2(1.0, 1.0),
+                roughnessMap: blackRoughness,
+                roughness: 1.0,
+                metalness: 0.05
+            });
+
+            const boardBase = new THREE.Mesh(
+                boardBaseGeo,
+                boardBaseMat
+            );
+
+            boardBase.position.set(0, BOARD_Y - 0.14, 0);
+            boardGroup.add(boardBase);
+        }
+
+        function initMinimap() {
+            const container = document.getElementById('minimap-container');
+            container.innerHTML = '';
+
+            const displayFiles = config.player === "Black" ? [...files].reverse() : files;
+            const displayRanks = config.player === "Black" ? [...ranks] : [...ranks].reverse();
+
+            displayRanks.forEach((rank, i) => {
+                displayFiles.forEach((file, j) => {
+                    const sqId = file + rank;
+                    const div = document.createElement('div');
+                    div.className = `minimap-square ${(i + j) % 2 === 0 ? 'light' : 'dark'}`;
+                    div.dataset.square = sqId;
+
+                    div.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleSquareClick(sqId);
+                    });
+
+                    container.appendChild(div);
+                    minimapSquares[sqId] = div;
+                });
+            });
+        }
+
+        function initPieces() {
+            for (let sq in pieceMeshes) scene.remove(pieceMeshes[sq]);
+
+            const boardData = chess.board();
+
+            boardData.forEach((row, r) => {
+                row.forEach((piece, f) => {
+                    const sqId = files[f] + ranks[7 - r];
+
+                    if (piece) {
+                        const type = piece.color + piece.type;
+                        const mesh = assetMap[type].clone();
+
+                        mesh.position.copy(getSquarePosition(sqId));
+                        mesh.position.y = PIECE_Y;
+                        mesh.userData = { type: piece.type, color: piece.color };
+
+                        scene.add(mesh);
+                        pieceMeshes[sqId] = mesh;
+                    }
+                });
+            });
+
+            updateVisuals();
+            updateCameraPOV();
+        }
+
+        // ==========================================
+        // 5. CAMERA CONTROLS
+        // ==========================================
+        let isDragging = false;
+
+        // Shift = toggle between locked king camera and completely free camera.
+        let isFreeCamera = false;
+        const keys = {};
+        const FREE_CAMERA_SPEED = 5.0;
+        let activeKingSquare = null;
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.button === 2) {
+                isDragging = true;
+                document.body.requestPointerLock();
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 2) {
+                isDragging = false;
+
+                // Always release the mouse when right-click is released,
+                // including while in free-roam camera mode.
+                if (document.pointerLockElement === document.body) {
+                    document.exitPointerLock();
+                }
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging && document.pointerLockElement === document.body) {
+                cameraYaw -= e.movementX * 0.003;
+
+                // Mouse UP = camera looks UP.
+                // Mouse DOWN = camera looks DOWN.
+                cameraPitch -= e.movementY * 0.003;
+
+                cameraPitch = Math.max(
+                    -Math.PI / 2.1,
+                    Math.min(Math.PI / 2.1, cameraPitch)
+                );
+
+                camera.rotation.set(cameraPitch, cameraYaw, 0);
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Shift') {
+                if (e.repeat) return;
+                toggleFreeCamera();
+                return;
+            }
+
+            if (isFreeCamera) {
+                const key = e.key.toLowerCase();
+        
+                keys[key] = true;
+
+                // Space and Ctrl are used for vertical movement.
+                if (
+                    ['w', 'a', 's', 'd', ' ', 'control'].includes(key)
+                ) {
+                    e.preventDefault();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        window.addEventListener('blur', () => {
+            for (const key in keys) keys[key] = false;
+        });
+
+        window.addEventListener('resize', () => {
+            controllerCursorX = Math.max(0, Math.min(window.innerWidth, controllerCursorX));
+            controllerCursorY = Math.max(0, Math.min(window.innerHeight, controllerCursorY));
+            updateControllerCursorElement();
+        });
+
+        function updateKingVisibility() {
+            let whiteKingSquare = null;
+            let blackKingSquare = null;
+        
+            for (let sq in pieceMeshes) {
+                const p = pieceMeshes[sq].userData;
+
+                if (p.type === 'k') {
+                    if (p.color === 'w') {
+                        whiteKingSquare = sq;
+                    } else {
+                        blackKingSquare = sq;
+                    }
+                }
+            }
+
+            // Free-roam camera:
+            // Both kings should always be visible.
+            if (isFreeCamera) {
+                if (whiteKingSquare && pieceMeshes[whiteKingSquare]) {
+                    pieceMeshes[whiteKingSquare].traverse(child => {
+                        if (child.isMesh) child.visible = true;
+                    });
+                }
+        
+                if (blackKingSquare && pieceMeshes[blackKingSquare]) {
+                    pieceMeshes[blackKingSquare].traverse(child => {
+                        if (child.isMesh) child.visible = true;
+                    });
+                }
+
+                return;
+            }
+
+            // 1-Player mode:
+            // Your king is invisible.
+            // AI king is always visible.
+            if (config.difficulty !== "2_Player") {
+                const yourColor = config.player === "White" ? 'w' : 'b';
+        
+                if (whiteKingSquare && pieceMeshes[whiteKingSquare]) {
+                    pieceMeshes[whiteKingSquare].traverse(child => {
+                        if (child.isMesh) {
+                            child.visible = yourColor === 'w' ? false : true;
+                        }
+                    });
+                }
+
+                if (blackKingSquare && pieceMeshes[blackKingSquare]) {
+                    pieceMeshes[blackKingSquare].traverse(child => {
+                        if (child.isMesh) {
+                            child.visible = yourColor === 'b' ? false : true;
+                        }
+                    });
+                }
+
+                return;
+            }
+
+            // 2-Player local mode:
+            // The king whose turn it currently is is invisible.
+            // The other player's king is visible.
+            const turnColor = chess.turn();
+        
+            if (whiteKingSquare && pieceMeshes[whiteKingSquare]) {
+                pieceMeshes[whiteKingSquare].traverse(child => {
+                    if (child.isMesh) {
+                        child.visible = turnColor !== 'w';
+                    }
+                });
+            }
+
+            if (blackKingSquare && pieceMeshes[blackKingSquare]) {
+                pieceMeshes[blackKingSquare].traverse(child => {
+                    if (child.isMesh) {
+                        child.visible = turnColor !== 'b';
+                    }
+                });
+            }
+        }
+
+        function findActiveKingSquare() {
+            let wkSquare, bkSquare;
+
+            for (let sq in pieceMeshes) {
+                const p = pieceMeshes[sq].userData;
+
+                if (p.type === 'k') {
+                    if (p.color === 'w') wkSquare = sq;
+                    else bkSquare = sq;
+                }
+            }
+
+            const isSinglePlayer = config.difficulty !== "2_Player";
+            const playerPOV = config.player === "White" ? 'w' : 'b';
+            const turnColor = chess.turn();
+
+            return isSinglePlayer
+                ? (playerPOV === 'w' ? wkSquare : bkSquare)
+                : (turnColor === 'w' ? wkSquare : bkSquare);
+        }
+
+        let cameraNotifTimer = null;
+
+        function showCameraNotification(text) {
+            const notif = document.getElementById('camera-notification');
+            notif.innerText = text;
+            notif.style.opacity = '1'; // Fade in
+
+            // Clear any existing timer if the user presses Shift rapidly
+            if (cameraNotifTimer) clearTimeout(cameraNotifTimer);
+
+            // Wait 1.5 seconds, then fade out
+            cameraNotifTimer = setTimeout(() => {
+                notif.style.opacity = '0';
+            }, 1500); 
+        }
+
+        function toggleFreeCamera() {
+            isFreeCamera = !isFreeCamera;
+
+            // Update bottom-left controls hint text
+            const hintElement = document.getElementById('camera-mode-hint');
+            if (hintElement) {
+                hintElement.innerText = isFreeCamera 
+                    ? "Press Shift for king pov" 
+                    : "Press Shift to set camera to free roam";
+            }
+
+            if (isFreeCamera) {
+                showCameraNotification("Camera : Free Roam");
+        
+                // Both kings are visible in free-roam mode.
+                updateKingVisibility();
+    
+                if (document.pointerLockElement === document.body) {
+                    document.exitPointerLock();
+                }
+
+            } else {
+                showCameraNotification("Camera : Locked");
+
+                // Return to the active king and lock the camera back to it.
+                activeKingSquare = findActiveKingSquare();
+
+                if (activeKingSquare && pieceMeshes[activeKingSquare]) {
+                    const kPos = pieceMeshes[activeKingSquare].position;
+
+                    camera.position.set(kPos.x, kPos.y + 2.2, kPos.z);
+
+                    const playerPOV = config.player === "White" ? 'w' : 'b';
+                    cameraYaw = (activeKingSquare === findWhiteKingSquare()) ? 0 : Math.PI;
+                    cameraPitch = -0.3;
+                    camera.rotation.set(cameraPitch, cameraYaw, 0);
+                }
+
+                updateKingVisibility();
+            }
+        }
+
+        function findWhiteKingSquare() {
+            for (let sq in pieceMeshes) {
+                const p = pieceMeshes[sq].userData;
+
+                if (p.type === 'k' && p.color === 'w') return sq;
+            }
+
+            return null;
+        }
+
+        function updateFreeCamera(delta) {
+            if (!isFreeCamera) return;
+
+            const move = new THREE.Vector3();
+
+            const forward = new THREE.Vector3(
+                -Math.sin(cameraYaw),
+                0,
+                -Math.cos(cameraYaw)
+            );
+
+            const right = new THREE.Vector3(
+                Math.cos(cameraYaw),
+                0,
+                -Math.sin(cameraYaw)
+            );
+
+            // ==========================================
+            // HORIZONTAL FREE-ROAM MOVEMENT
+            // ==========================================
+
+            if (keys['w']) move.add(forward);
+            if (keys['s']) move.sub(forward);
+            if (keys['d']) move.add(right);
+            if (keys['a']) move.sub(right);
+
+            if (move.lengthSq() > 0) {
+                move.normalize().multiplyScalar(
+                    FREE_CAMERA_SPEED * delta
+                );
+
+                camera.position.add(move);
+            }
+
+            // ==========================================
+            // VERTICAL FREE-ROAM MOVEMENT
+            // SPACE = UP
+            // CTRL = DOWN
+            // ==========================================
+
+            if (keys[' ']) {
+                camera.position.y += FREE_CAMERA_SPEED * delta;
+            }
+        
+            if (keys['control']) {
+                camera.position.y -= FREE_CAMERA_SPEED * delta;
+            }
+
+            // ==========================================
+            // PREVENT CAMERA FROM GOING INSIDE/BELOW
+            // THE CHESSBOARD
+            // ==========================================
+
+            // Top of the chessboard squares:
+            // BOARD_Y is the center of the square.
+            // Board thickness is 0.14, so the top surface
+            // is BOARD_Y + 0.07.
+            //
+            // Add a small safety margin so the camera
+            // can never clip into the board.
+
+            const minimumCameraY = BOARD_Y + 0.25;
+
+            if (camera.position.y < minimumCameraY) {
+                camera.position.y = minimumCameraY;
+            }
+
+            // ==========================================
+            // NO X/Z LIMITS
+            // ==========================================
+            //
+            // The camera is intentionally NOT restricted
+            // to the chessboard anymore.
+            //
+            // It can freely travel away from the board.
+        }
+
+        // Switch the camera to the king whose turn it is.
+        // Used only for the automatic 2-player camera change.
+        function switchCameraToActiveKing() {
+            activeKingSquare = findActiveKingSquare();
+
+            if (!activeKingSquare || !pieceMeshes[activeKingSquare]) return;
+
+            const kPos = pieceMeshes[activeKingSquare].position;
+
+            camera.position.set(kPos.x, kPos.y + 2.2, kPos.z);
+
+            cameraYaw = (activeKingSquare === findWhiteKingSquare()) ? 0 : Math.PI;
+            cameraPitch = -0.3;
+            camera.rotation.set(cameraPitch, cameraYaw, 0);
+
+            updateKingVisibility();
+        }
+
+        function updateCameraPOV() {
+            activeKingSquare = findActiveKingSquare();
+
+            if (!activeKingSquare || !pieceMeshes[activeKingSquare]) return;
+
+            // Free camera mode: never move the camera automatically.
+            if (isFreeCamera) {
+                updateKingVisibility();
+                return;
+            }
+
+            const kPos = pieceMeshes[activeKingSquare].position;
+
+            // Only establish the initial camera position.
+            // After that, preserve the player's camera position,
+            // yaw and pitch so the camera does not reset every turn.
+            if (!cameraInitialized) {
+                camera.position.set(kPos.x, kPos.y + 2.2, kPos.z);
+
+                cameraYaw = (activeKingSquare === findWhiteKingSquare()) ? 0 : Math.PI;
+                cameraPitch = -0.3;
+                camera.rotation.set(cameraPitch, cameraYaw, 0);
+
+                cameraInitialized = true;
+            }
+
+            updateKingVisibility();
+        }
+
+        let cameraInitialized = false;
+
+        // ==========================================
+        // 6. INTERACTION & HIGHLIGHTING (FREE CURSOR)
+        // ==========================================
+        const raycaster = new THREE.Raycaster();
+
+        window.addEventListener('click', (e) => {
+            if (
+                e.button === 2 ||
+                isDragging ||
+                isPaused ||
+                pendingPromotionMove ||
+                chess.game_over() ||
+                isAiThinking ||
+                isAnimating
+            ) return;
+
+            if (e.target.closest('#minimap-container') || e.target.closest('.btn')) return;
+
+            if (config.difficulty !== "2_Player") {
+                const isWhiteTurn = chess.turn() === 'w';
+
+                if ((config.player === "White") !== isWhiteTurn) return;
+            }
+
+            const pointer = new THREE.Vector2();
+
+            pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(pointer, camera);
+
+            const intersects = raycaster.intersectObjects(Object.values(squareMeshes));
+
+            if (intersects.length > 0) {
+                handleSquareClick(intersects[0].object.userData.square);
+            }
+        });
+
+        function handleSquareClick(sqId) {
+            // Do not allow interaction while promotion menu is open
+            if (pendingPromotionMove) return;
+
+            const piece = chess.get(sqId);
+            const isOwnPiece = piece && piece.color === chess.turn();
+
+            if (selectedSquare === sqId) {
+                selectedSquare = null;
+                validMoves = [];
+                updateVisuals();
+                return;
+            }
+
+            if (selectedSquare) {
+                const moveObj = validMoves.find(m => m.to === sqId);
+
+                if (moveObj) {
+
+                    // ==========================================
+                    // PAWN PROMOTION
+                    // ==========================================
+                    if (
+                        moveObj.flags.includes('p') ||
+                        moveObj.flags.includes('cp')
+                    ) {
+                        showPromotionMenu(moveObj);
+                        return;
+                    }        
+
+                    executeMove(moveObj);
+                    selectedSquare = null;
+                    return;
+                }
+            }
+
+            if (isOwnPiece) {
+                selectedSquare = sqId;
+                validMoves = chess.moves({
+                    square: sqId,
+                    verbose: true
+                });
+
+                updateVisuals();
+            } else {
+                selectedSquare = null;
+                validMoves = [];
+                updateVisuals();
+            }
+        }
+
+        function updateVisuals() {
+                for (let sq in squareMeshes) {
+                    const isLight = squareMeshes[sq].userData.isLight;
+
+                    squareMeshes[sq].material.color.setHex(0xffffff);
+
+                    // Reset blue glow
+                    squareMeshes[sq].material.emissive.setHex(0x000000);
+                    squareMeshes[sq].material.emissiveIntensity = 0;
+                
+                    minimapSquares[sq].innerHTML = '';
+
+                    const p = chess.get(sq);
+
+                minimapSquares[sq].style.backgroundImage =
+                    p ? `url('assets/${p.color}${p.type}.svg')` : 'none';
+            }
+
+            highlight3DMeshes.forEach(m => scene.remove(m));
+            highlight3DMeshes.length = 0;
+
+            if (selectedSquare) {
+
+                // Blue glow around the selected chess square
+                squareMeshes[selectedSquare].material.emissive.setHex(0x0088ff);
+                squareMeshes[selectedSquare].material.emissiveIntensity = 1.5;
+
+                minimapSquares[selectedSquare].innerHTML +=
+                    `<div class="minimap-highlight"></div>`;
+
+                const planeGeo = new THREE.PlaneGeometry(
+                    BOARD_SIZE,
+                    BOARD_SIZE
+                );
+
+                const highlightMat = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.4
+                });
+
+                validMoves.forEach(move => {
+                    const hMesh = new THREE.Mesh(
+                        planeGeo,
+                        highlightMat
+                    );
+
+                    hMesh.position.copy(getSquarePosition(move.to));
+                    hMesh.position.y = BOARD_Y + 0.08;
+                    hMesh.rotation.x = -Math.PI / 2;
+
+                    scene.add(hMesh);
+                    highlight3DMeshes.push(hMesh);
+
+                    const isCap = chess.get(move.to) !== null;
+
+                    minimapSquares[move.to].innerHTML +=
+                        `<div class="minimap-move-indicator ${isCap ? 'capture' : ''}"></div>`;
+                });
+            }
+
+            if (chess.in_check() || chess.in_checkmate()) {
+                let kingSq = null;
+                const turnColor = chess.turn();
+
+                for (let file of files) {
+                    for (let rank of ranks) {
+                        const p = chess.get(file + rank);
+
+                        if (p && p.type === 'k' && p.color === turnColor) {
+                            kingSq = file + rank;
+                        }
+                    }
+                }
+
+                if (kingSq) {
+                    const isMate = chess.in_checkmate();
+                    const planeGeo = new THREE.PlaneGeometry(BOARD_SIZE, BOARD_SIZE);
+                    const checkMat = new THREE.MeshBasicMaterial({
+                        color: isMate ? 0xffc0cb : 0xff0000,
+                        transparent: true,
+                        opacity: 0.65
+                    });
+                    const checkMesh = new THREE.Mesh(planeGeo, checkMat);
+                    checkMesh.position.copy(getSquarePosition(kingSq));
+                    checkMesh.position.y = BOARD_Y + 0.081; // Renders safely above the board
+                    checkMesh.rotation.x = -Math.PI / 2;
+
+                    scene.add(checkMesh);
+                    highlight3DMeshes.push(checkMesh);
+
+                    minimapSquares[kingSq].innerHTML +=
+                        `<div class="minimap-highlight" style="background-color: ${isMate ? 'rgba(255,192,203,0.7)' : 'rgba(255,0,0,0.7)'}"></div>`;
+                }
+            }
+        }
+
+        // ==========================================
+        // 7. ANIMATION ENGINE
+        // ==========================================
+        let activeAnimations = [];
+        let lastFrameTime = performance.now();
+
+        function renderLoop() {
+            requestAnimationFrame(renderLoop);
+
+            const now = performance.now();
+            const delta = Math.min((now - lastFrameTime) / 1000, 0.05);
+            lastFrameTime = now;
+
+            updateControllerInput(delta);
+
+            if (!isPaused) {
+                updateFreeCamera(delta);
+            }
+
+            if (!isPaused && activeAnimations.length > 0) {
+                const anim = activeAnimations[0];
+
+                anim.mesh.position.lerp(anim.target, 0.15);
+
+                // Track camera with king during its movement,
+                // but preserve the player's current yaw/pitch.
+                if (anim.mesh.userData.type === 'k' && !isFreeCamera) {
+                    const isSP = config.difficulty !== "2_Player";
+                    const isOwnTurn =
+                        chess.turn() === (config.player === "White" ? 'w' : 'b');
+
+                    if (!isSP || isOwnTurn) {
+                        camera.position.set(
+                            anim.mesh.position.x,
+                            anim.mesh.position.y + 2.2,
+                            anim.mesh.position.z
+                        );
+                    }
+                }
+
+                if (anim.mesh.position.distanceTo(anim.target) < 0.02) {
+                    anim.mesh.position.copy(anim.target);
+                    activeAnimations.shift();
+                    anim.callback();
+
+                    // Play piece sound after the move has fully finished
+                    if (!chess.game_over()) {
+                        pieceSound.currentTime = 0;
+                        pieceSound.play().catch(() => {});
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        renderLoop();
+
+        // ==========================================
+        // PAWN PROMOTION MENU
+        // ==========================================
+
+        function showPromotionMenu(moveObj) {
+            pendingPromotionMove = moveObj;
+
+            // Clear the normal selection/highlights
+            selectedSquare = null;
+            validMoves = [];
+            updateVisuals();
+
+            const promotionMenu =
+                document.getElementById('promotion-menu');
+
+            // Determine the color of the pawn
+            const pawnColor = chess.turn();
+        
+            // Set the correct piece images
+            document.getElementById('promotion-queen').style.backgroundImage =
+                `url('assets/${pawnColor}q.svg')`;
+
+            document.getElementById('promotion-rook').style.backgroundImage =
+                `url('assets/${pawnColor}r.svg')`;
+
+            document.getElementById('promotion-bishop').style.backgroundImage =
+                `url('assets/${pawnColor}b.svg')`;
+
+            document.getElementById('promotion-knight').style.backgroundImage =
+                `url('assets/${pawnColor}n.svg')`;
+
+            promotionMenu.style.display = 'flex';
+
+            // Focus Queen initially
+            setTimeout(() => {
+                const queenButton =
+                    promotionMenu.querySelector('[data-piece="q"]');
+        
+                if (queenButton) {
+                    queenButton.focus();
+                }
+            }, 20);
+        }
+
+        document
+            .querySelectorAll('.promotion-option')
+            .forEach(button => {
+
+                button.addEventListener('click', () => {
+                    const pieceType = button.dataset.piece;
+                    completePromotion(pieceType);
+                });
+
+            });
+
+        function completePromotion(pieceType) {
+            if (!pendingPromotionMove) return;
+
+            const moveObj = pendingPromotionMove;
+        
+            pendingPromotionMove = null;
+        
+            moveObj.promotion = pieceType;
+
+            document.getElementById('promotion-menu').style.display =
+                'none';
+
+            executeMove(moveObj);
+        }
+
+        function executeMove(moveObj) {
+            isAnimating = true;
+            validMoves = [];
+            updateVisuals();
+
+            const fromSq = moveObj.from;
+            const toSq = moveObj.to;
+            const movingMesh = pieceMeshes[fromSq];
+
+            const targetPos = getSquarePosition(toSq);
+            targetPos.y = PIECE_Y;
+
+            activeAnimations.push({
+                mesh: movingMesh,
+                target: targetPos,
+
+                callback: () => {
+                    chess.move(moveObj);
+
+                    if (pieceMeshes[toSq]) {
+                        scene.remove(pieceMeshes[toSq]);
+                    }
+
+                    pieceMeshes[toSq] = movingMesh;
+                    delete pieceMeshes[fromSq];
+
+                    if (
+                        moveObj.flags.includes('k') ||
+                        moveObj.flags.includes('q') ||
+                        moveObj.flags.includes('p') ||
+                        moveObj.flags.includes('cp')
+                    ) {
+                        initPieces();
+                    }
+
+                    isAnimating = false;
+                    updateVisuals();
+
+                    // In 2-Player mode, wait 0.5 seconds after the
+                    // piece reaches its destination, then switch cameras.
+                    if (
+                        config.difficulty === "2_Player" &&
+                        !chess.game_over()
+                    ) {
+                        scheduleTwoPlayerCameraSwitch();
+                    } else {
+                        // Preserve existing single-player camera behavior.
+                        updateCameraPOV();
+                    }
+
+                    // ==========================================
+                    // 2 PLAYER CAMERA SWITCH
+                    // ==========================================
+                    // The piece has now reached its destination.
+                    // Wait 0.5 seconds, then move the camera to
+                    // the king of the player whose turn is next.
+                    if (
+                        config.difficulty === "2_Player" &&
+                        !isFreeCamera &&
+                        !chess.game_over()
+                    ) {
+                        setTimeout(() => {
+                            if (!isFreeCamera && !chess.game_over()) {
+                                switchCameraToActiveKing();
+                            }
+                        }, 500);
+                    } else {
+                        // Do not reset camera after a move in single-player mode.
+                        updateCameraPOV();
+                    }
+
+                    checkGameOver();
+
+                    if (chess.in_check() && !chess.game_over()) {
+                        checkSound.currentTime = 0;
+                        checkSound.play().catch(() => {});
+                    }
+
+                    if (
+                        config.difficulty !== "2_Player" &&
+                        !chess.game_over()
+                    ) {
+                        const isWhiteTurn = chess.turn() === 'w';
+
+                        if (
+                            (config.player === "White") !== isWhiteTurn
+                        ) {
+                            triggerAIMove();
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // PAUSE MENU
+        // ==========================================
+
+        function openPauseMenu() {
+            if (chess.game_over()) return;
+
+            isPaused = true;
+            isDragging = false;
+
+            // Stop WASD movement
+            for (const key in keys) {
+                keys[key] = false;
+            }
+
+            // Release mouse if it is locked
+            if (document.pointerLockElement === document.body) {
+                document.exitPointerLock();
+            }
+
+            document.getElementById('pause-menu').style.display = 'flex';
+            setControllerCursorVisible(false);
+
+            // Auto-focus the first button for keyboard navigation
+            setTimeout(() => {
+                const resumeBtn = document.getElementById('resume-btn');
+                if (resumeBtn) resumeBtn.focus();
+            }, 10);
+        }
+
+        function closePauseMenu() {
+            isPaused = false;
+        
+            document.getElementById('pause-menu').style.display = 'none';
+            setControllerCursorVisible(controllerConnected && !pendingPromotionMove && !chess.game_over());
+
+            // If an AI move arrived while paused, perform it now.
+            if (pendingAIMove && !chess.game_over()) {
+                const move = pendingAIMove;
+                pendingAIMove = null;
+                executeMove(move);
+            }
+
+            // Continue the 2-player camera switch if it was interrupted.
+            if (pauseSwitchTimer) {
+                clearTimeout(pauseSwitchTimer);
+                pauseSwitchTimer = null;
+
+                if (
+                    config.difficulty === "2_Player" &&
+                    !chess.game_over()
+                ) {
+                    scheduleTwoPlayerCameraSwitch();
+                }
+            }
+        }        
+
+        function restartGame() {
+            if (pauseSwitchTimer) {
+                clearTimeout(pauseSwitchTimer);
+                pauseSwitchTimer = null;
+            }
+
+            if (aiMoveTimer) {
+                clearTimeout(aiMoveTimer);
+                aiMoveTimer = null;
+            }
+
+            chess.reset();
+
+            selectedSquare = null;
+            validMoves = [];
+            activeAnimations = [];
+            pendingAIMove = null;
+
+            isPaused = false;
+            isAiThinking = false;
+            isAnimating = false;
+
+            cameraInitialized = false;
+            isFreeCamera = false;
+
+            document.getElementById('pause-menu').style.display = 'none';
+            document.getElementById('game-over-screen').style.display = 'none';
+            document.getElementById('pause-button').style.display = 'flex';
+
+            initPieces();
+
+            if (document.pointerLockElement === document.body) {
+                document.exitPointerLock();
+            }
+
+            if (sf) {
+                sf.postMessage('ucinewgame');
+            }
+
+            if (
+                config.difficulty !== "2_Player" &&
+                config.player === "Black"
+            ) {
+                triggerAIMove();
+            }
+        }
+
+        // ============================================================
+        // LEAVE GAME / RETURN TO MAIN MENU
+        // ============================================================
+
+        let isLeavingGame = false;
+
+        function leaveToMainMenu() {
+
+            // Prevent multiple clicks / repeated commands
+            if (isLeavingGame) {
+                return;
+            }
+
+            isLeavingGame = true;
+
+            // Release pointer lock
+            if (document.pointerLockElement === document.body) {
+                document.exitPointerLock();
+            }
+
+            // Stop free-roam movement
+            isDragging = false;
+
+            for (const key in keys) {
+                keys[key] = false;
+            }
+
+            // Stop pause state
+            isPaused = true;
+
+            // Change loading text
+            document.getElementById('loading-title').textContent =
+                'LEAVING THE CHESSBOARD';
+
+            document.getElementById('loading-subtitle').textContent =
+                'Returning to the main menu...';
+
+            // Show the same elegant loading screen
+            const loadingScreen =
+                document.getElementById('loading-screen');
+
+            loadingScreen.style.display = 'flex';
+
+            // Force browser/WebView to apply the display change
+            requestAnimationFrame(() => {
+
+                loadingScreen.style.opacity = '1';
+                loadingScreen.style.visibility = 'visible';
+                loadingScreen.style.pointerEvents = 'all';
+
+            });
+
+            // Disable everything behind the loading screen
+            document.body.style.pointerEvents = 'none';
+
+            // Keep loading screen active
+            loadingScreen.style.pointerEvents = 'all';
+
+            // Navigate to menu
+            window.location.href = 'menu.html';
+        }
+
+        function scheduleTwoPlayerCameraSwitch() {
+            if (pauseSwitchTimer) {
+                clearTimeout(pauseSwitchTimer);
+                pauseSwitchTimer = null;
+            }
+
+            const waitForSwitch = () => {
+                // Keep waiting while paused.
+                if (isPaused) {
+                    pauseSwitchTimer = setTimeout(waitForSwitch, 100);
+                    return;
+                }
+
+                if (
+                    !isFreeCamera &&
+                    !chess.game_over()
+                ) {
+                    activeKingSquare = findActiveKingSquare();
+
+                    if (
+                        activeKingSquare &&
+                        pieceMeshes[activeKingSquare]
+                    ) {
+                        const kPos =
+                            pieceMeshes[activeKingSquare].position;
+        
+                        camera.position.set(
+                            kPos.x,
+                            kPos.y + 2.2,
+                            kPos.z
+                        );
+
+                        cameraYaw =
+                            activeKingSquare === findWhiteKingSquare()
+                                ? 0
+                                : Math.PI;
+
+                        cameraPitch = -0.3;
+
+                        camera.rotation.set(
+                            cameraPitch,
+                            cameraYaw,
+                            0
+                        );
+
+                        updateKingVisibility();
+                    }
+                }
+
+                pauseSwitchTimer = null;
+            };
+
+            pauseSwitchTimer = setTimeout(waitForSwitch, 500);
+        }
+
+        // Pause button
+        document.getElementById('pause-button')
+            .addEventListener('click', openPauseMenu);
+
+        // Resume
+        document.getElementById('resume-btn')
+            .addEventListener('click', closePauseMenu);
+
+        // Restart
+        document.getElementById('restart-btn')
+            .addEventListener('click', restartGame);
+
+        // Main Menu
+        document.getElementById('pause-main-menu-btn')
+            .addEventListener('click', () => {
+
+                leaveToMainMenu();
+
+            });
+
+        document.getElementById('game-over-main-menu-btn')
+            .addEventListener('click', () => {
+
+                leaveToMainMenu();
+
+            });
+        
+        // Escape also opens/closes pause menu
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+
+                // Promotion must be completed before anything else
+                if (pendingPromotionMove) {
+                    e.preventDefault();
+                    return;
+                }
+
+                if (isPaused) {
+                    closePauseMenu();
+                } else {
+                    openPauseMenu();
+                }
+            }
+        });
+
+        // ==========================================
+        // 8. STOCKFISH AI & GAME OVER
+        // ==========================================
+        if (config.difficulty !== "2_Player") {
+            try {
+                // Get the correct absolute URL for the local Stockfish file.
+                // This works with your offline/local folder structure.
+                const stockfishURL =
+                    new URL('libs/stockfish.js', window.location.href).href;
+
+                // Create a worker wrapper that imports the local Stockfish file.
+                const sfCode =
+                    `importScripts(${JSON.stringify(stockfishURL)});`;
+
+                const blob = new Blob(
+                    [sfCode],
+                    { type: 'application/javascript' }
+                );
+        
+                sf = new Worker(
+                    URL.createObjectURL(blob)
+                );
+
+                // Initialize Stockfish
+                sf.postMessage('uci');
+                sf.postMessage('ucinewgame');
+
+                // Set difficulty
+                let skillLevel =
+                    config.difficulty === "Medium"
+                        ? 10
+                        : (config.difficulty === "Hard" ? 20 : 0);
+
+                sf.postMessage(
+                    `setoption name Skill Level value ${skillLevel}`
+                );        
+
+                // Receive Stockfish messages
+                sf.onmessage = function(event) {
+                    const line = event.data;
+
+                    if (
+                        typeof line === 'string' &&
+                        line.startsWith('bestmove')
+                    ) {
+                        const moveStr = line.split(' ')[1];
+
+                        if (
+                            moveStr &&
+                            moveStr !== '(none)'
+                        ) {
+                            const fromSq = moveStr.substring(0, 2);
+                            const toSq = moveStr.substring(2, 4);
+
+                            const promo =
+                                moveStr.length > 4
+                                    ? moveStr[4]
+                                    : undefined;
+        
+                            isAiThinking = false;
+        
+                            // Find the matching legal chess.js move
+                            const legalMove =
+                                chess.moves({
+                                    verbose: true
+                                }).find(
+                                    m =>
+                                        m.from === fromSq &&
+                                        m.to === toSq
+                                );
+        
+                            if (legalMove) {
+                                executeMove({
+                                    from: fromSq,
+                                    to: toSq,
+                                    promotion: promo,
+                                    flags: legalMove.flags
+                                });
+                            }
+                        } else {
+                            // No legal move returned
+                            isAiThinking = false;
+                        }
+                    }
+                };
+
+                // Handle worker errors instead of silently ignoring them.
+                sf.onerror = function(error) {
+                    console.error(
+                        "Stockfish worker error:",
+                        error
+                    );
+
+                    isAiThinking = false;
+                };
+
+            } catch (err) {
+                console.error(
+                    "Failed to initialize Stockfish:",
+                    err
+                );
+
+                isAiThinking = false;
+            }
+        }
+
+        function triggerAIMove() {
+            if (!sf) return;
+
+            isAiThinking = true;
+
+            // ==========================================
+            // EASY AI = BEGINNER LEVEL
+            // ==========================================
+            if (config.difficulty === "Easy") {
+
+                setTimeout(() => {
+                    const legalMoves = chess.moves({
+                        verbose: true
+                    });
+
+                    if (!legalMoves.length) {
+                        isAiThinking = false;
+                        return;
+                    }
+        
+                    /*
+                     * Easy AI deliberately makes mistakes.
+                     *
+                     * 65% chance:
+                     * Use Stockfish depth 1.
+                     *
+                     * 35% chance:
+                     * Choose a random legal move.
+                     *
+                     * This makes Easy feel much more like a
+                     * beginner instead of a weak Stockfish player.
+                     */
+
+                    if (Math.random() < 0.35) {
+                        const randomMove =
+                            legalMoves[
+                                Math.floor(
+                                    Math.random() * legalMoves.length
+                                )
+                            ];
+
+                        isAiThinking = false;
+
+                        executeMove({
+                            from: randomMove.from,
+                            to: randomMove.to,
+                            promotion: randomMove.promotion,
+                            flags: randomMove.flags
+                        });
+
+                        return;
+                    }
+
+                    // Normal Easy Stockfish move
+                    sf.postMessage(
+                        `position fen ${chess.fen()}`
+                    );
+
+                    sf.postMessage(
+                        `go depth 1`
+                    );
+
+                }, 300);
+
+                return;
+            }
+
+            // ==========================================
+            // MEDIUM / HARD — UNCHANGED
+            // ==========================================
+
+            let depth =
+                config.difficulty === "Hard"
+                    ? 10
+                    : 5;
+
+            setTimeout(() => {
+                sf.postMessage(
+                    `position fen ${chess.fen()}`
+                );
+
+                sf.postMessage(
+                    `go depth ${depth}`
+                );
+            }, 100);
+        }
+
+        function checkGameOver() {
+            if (chess.game_over()) {
+                gameOverSound.currentTime = 0;
+                gameOverSound.play().catch(() => {});
+                setTimeout(() => {
+                    const txt =
+                        document.getElementById('game-result');
+                        document.getElementById('pause-button').style.display = 'none';
+
+                    if (chess.in_checkmate()) {
+                        txt.innerText =
+                            `${chess.turn() === 'w' ? 'Black' : 'White'} Won!`;
+                    } else if (chess.in_stalemate()) {
+                        txt.innerText = "Stalemate!";
+                    } else {
+                        txt.innerText = "Draw!";
+                    }
+
+                    document.getElementById(
+                        'game-over-screen'
+                    ).style.display = 'flex';
+
+                    document.exitPointerLock();
+                }, 600);
+            }
+        }
+
+        document.getElementById('play-again-btn').addEventListener('click', () => {
+            chess.reset();
+            initPieces();
+
+            document.getElementById(
+                'game-over-screen'
+            ).style.display = 'none';
+
+            isAiThinking = false;
+            isAnimating = false;
+
+            if (sf) {
+                sf.postMessage('ucinewgame');
+            }
+
+            if (
+                config.difficulty !== "2_Player" &&
+                config.player === "Black"
+            ) {
+                triggerAIMove();
+            }
+        });
+
+        // ==========================================
+        // PAUSE MENU ARROW KEY NAVIGATION
+        // ==========================================
+        document.addEventListener('keydown', (event) => {
+            // Only intercept keys if the game is paused
+            if (!isPaused) return;
+
+            const navigationKeys = ['ArrowUp', 'ArrowDown', 'Enter'];
+            if (!navigationKeys.includes(event.key)) return;
+
+            event.preventDefault(); // Prevent scrolling
+
+            const pauseMenu = document.getElementById('pause-menu');
+            // Get all the stylized buttons in the pause menu
+            const buttons = Array.from(pauseMenu.querySelectorAll('.btn'));
+    
+            if (buttons.length === 0) return;
+
+            let currentIndex = buttons.indexOf(document.activeElement);
+
+            // If nothing is focused, start at the first button
+            if (currentIndex === -1) {
+                currentIndex = 0;
+                buttons[currentIndex].focus();
+                return;
+            }
+        
+            // ENTER = select the highlighted button
+            if (event.key === 'Enter') {
+                buttons[currentIndex].click();
+                return;
+            }
+
+            // UP = move selection upward
+            if (event.key === 'ArrowUp') {
+                currentIndex--;
+                if (currentIndex < 0) {
+                    currentIndex = buttons.length - 1; // Wrap to bottom
+                }
+                buttons[currentIndex].focus();
+                return;
+            }
+
+            // DOWN = move selection downward
+            if (event.key === 'ArrowDown') {
+                currentIndex++;
+                if (currentIndex >= buttons.length) {
+                    currentIndex = 0; // Wrap to top
+                }
+                buttons[currentIndex].focus();
+                return;
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+
+            if (!pendingPromotionMove) return;
+
+            const promotionMenu =
+                document.getElementById('promotion-menu');
+
+            const buttons = Array.from(
+                promotionMenu.querySelectorAll('.promotion-option')
+            );
+
+            if (!buttons.length) return;
+
+            const navigationKeys = [
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Enter'
+            ];
+
+            if (!navigationKeys.includes(event.key)) return;
+
+            event.preventDefault();
+
+            let currentIndex =
+                buttons.indexOf(document.activeElement);
+
+            if (currentIndex === -1) {
+                currentIndex = 0;
+                buttons[currentIndex].focus();
+                return;
+            }
+
+            if (event.key === 'Enter') {
+                buttons[currentIndex].click();
+                return;
+            }
+
+            if (
+                event.key === 'ArrowRight' ||
+                event.key === 'ArrowDown'
+            ) {
+                currentIndex++;
+
+                if (currentIndex >= buttons.length) {
+                    currentIndex = 0;
+                }
+            }
+
+            if (
+                event.key === 'ArrowLeft' ||
+                event.key === 'ArrowUp'
+            ) {
+                currentIndex--;
+
+                if (currentIndex < 0) {
+                    currentIndex = buttons.length - 1;
+                }
+            }
+
+            buttons[currentIndex].focus();
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect =
+                window.innerWidth / window.innerHeight;
+
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(
+                window.innerWidth,
+                window.innerHeight
+            );
+        });
+
+        // Launch
+        loadAssets();
+    </script>
+</body>
+</html>

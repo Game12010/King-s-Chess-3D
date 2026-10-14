@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               maximum-scale=1.0,
+               user-scalable=no,
+               viewport-fit=cover">
+
+<title>Coming Soon | Chess</title>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    body {
+        background:
+            radial-gradient(
+                circle at 50% 42%,
+                #29241c 0%,
+                #15130f 32%,
+                #090908 70%,
+                #050505 100%
+            );
+
+        color: #eee8dc;
+
+        font-family:
+            Georgia,
+            "Times New Roman",
+            serif;
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    /* =================================
+       AMBIENT LIGHT
+    ================================= */
+
+    .ambient {
+        position: absolute;
+
+        width: 55vw;
+        height: 55vw;
+
+        max-width: 650px;
+        max-height: 650px;
+
+        left: 50%;
+        top: 44%;
+
+        transform: translate(-50%, -50%);
+
+        background:
+            radial-gradient(
+                circle,
+                rgba(185, 145, 70, 0.10),
+                rgba(185, 145, 70, 0.035) 38%,
+                transparent 70%
+            );
+
+        filter: blur(20px);
+
+        animation:
+            ambientPulse 5s ease-in-out infinite;
+
+        pointer-events: none;
+    }
+
+    @keyframes ambientPulse {
+
+        0%, 100% {
+            opacity: 0.65;
+            transform:
+                translate(-50%, -50%)
+                scale(0.95);
+        }
+
+        50% {
+            opacity: 1;
+            transform:
+                translate(-50%, -50%)
+                scale(1.08);
+        }
+    }
+
+    /* =================================
+       MAIN CONTENT
+    ================================= */
+
+    .container {
+        position: relative;
+
+        width: min(900px, 90vw);
+
+        padding: 65px 40px 60px;
+
+        text-align: center;
+
+        animation:
+            pageEnter
+            1.5s
+            cubic-bezier(.22, .61, .36, 1)
+            forwards;
+
+        opacity: 0;
+        transform: translateY(25px);
+    }
+
+    @keyframes pageEnter {
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* =================================
+       KING
+    ================================= */
+
+    .king {
+        font-family:
+            "Times New Roman",
+            serif;
+
+        font-size:
+            clamp(90px, 13vw, 150px);
+
+        line-height: 0.9;
+
+        color:
+            rgba(220, 190, 125, 0.88);
+
+        text-shadow:
+            0 0 12px rgba(202, 161, 83, 0.25),
+            0 0 45px rgba(202, 161, 83, 0.12);
+
+        animation:
+            kingFloat
+            5s
+            ease-in-out
+            infinite;
+    }
+
+    @keyframes kingFloat {
+
+        0%, 100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-7px);
+        }
+    }
+
+    /* =================================
+       ORNAMENT
+    ================================= */
+
+    .ornament {
+        display: flex;
+
+        align-items: center;
+        justify-content: center;
+
+        gap: 14px;
+
+        margin:
+            30px auto 25px;
+
+        width:
+            min(420px, 75vw);
+    }
+
+    .line {
+        height: 1px;
+
+        flex: 1;
+
+        background:
+            linear-gradient(
+                90deg,
+                transparent,
+                rgba(201, 163, 93, 0.75)
+            );
+    }
+
+    .line.right {
+        background:
+            linear-gradient(
+                90deg,
+                rgba(201, 163, 93, 0.75),
+                transparent
+            );
+    }
+
+    .diamond {
+        width: 7px;
+        height: 7px;
+
+        background: #c9a35d;
+
+        transform: rotate(45deg);
+
+        box-shadow:
+            0 0 10px
+            rgba(201, 163, 93, 0.45);
+    }
+
+    /* =================================
+       TEXT
+    ================================= */
+
+    .eyebrow {
+        font-family:
+            "Segoe UI",
+            Arial,
+            sans-serif;
+
+        font-size: 12px;
+
+        letter-spacing: 5px;
+
+        text-transform: uppercase;
+
+        color: #bda675;
+
+        margin-bottom: 18px;
+    }
+
+    h1 {
+        font-size:
+            clamp(42px, 7vw, 76px);
+
+        font-weight: 400;
+
+        letter-spacing: 3px;
+
+        color: #f0eadf;
+
+        text-shadow:
+            0 2px 20px
+            rgba(0, 0, 0, 0.5);
+    }
+
+    .subtitle {
+        margin:
+            22px auto 0;
+
+        max-width: 560px;
+
+        font-family:
+            "Segoe UI",
+            Arial,
+            sans-serif;
+
+        font-size: 15px;
+
+        line-height: 1.8;
+
+        letter-spacing: 0.8px;
+
+        color:
+            rgba(230, 224, 212, 0.65);
+    }
+
+    /* =================================
+       PRESS ENTER
+    ================================= */
+
+    .back-prompt {
+        margin-top: 42px;
+
+        font-family:
+            "Segoe UI",
+            Arial,
+            sans-serif;
+
+        font-size: 11px;
+
+        letter-spacing: 3px;
+
+        text-transform: uppercase;
+
+        color:
+            rgba(220, 210, 190, 0.55);
+
+        animation:
+            promptPulse
+            2s
+            ease-in-out
+            infinite;
+    }
+
+    .enter-key {
+        display: inline-block;
+
+        margin-right: 9px;
+
+        padding:
+            7px 12px;
+
+        border:
+            1px solid
+            rgba(201, 163, 93, 0.42);
+
+        border-radius: 4px;
+
+        color:
+            rgba(225, 204, 164, 0.85);
+
+        background:
+            rgba(201, 163, 93, 0.045);
+
+        box-shadow:
+            inset 0 0 10px
+            rgba(201, 163, 93, 0.03);
+    }
+
+    @keyframes promptPulse {
+
+        0%, 100% {
+            opacity: 0.55;
+        }
+
+        50% {
+            opacity: 1;
+        }
+    }
+
+    /* =================================
+       CHESSBOARD DECORATION
+    ================================= */
+
+    .board {
+        position: absolute;
+
+        left: 50%;
+        bottom: -95px;
+
+        transform:
+            translateX(-50%)
+            perspective(600px)
+            rotateX(60deg);
+
+        width: 230px;
+        height: 230px;
+
+        opacity: 0.045;
+
+        display: grid;
+
+        grid-template-columns:
+            repeat(8, 1fr);
+
+        pointer-events: none;
+    }
+
+    /* =================================
+       FOOTER
+    ================================= */
+
+    .footer {
+        position: fixed;
+
+        bottom: 25px;
+        left: 0;
+
+        width: 100%;
+
+        text-align: center;
+
+        font-family:
+            "Segoe UI",
+            Arial,
+            sans-serif;
+
+        font-size: 10px;
+
+        letter-spacing: 3px;
+
+        text-transform: uppercase;
+
+        color:
+            rgba(220, 210, 190, 0.3);
+    }
+
+    /* =================================
+       CORNERS
+    ================================= */
+
+    .corner {
+        position: absolute;
+
+        width: 45px;
+        height: 45px;
+
+        opacity: 0.3;
+    }
+
+    .corner::before,
+    .corner::after {
+        content: "";
+
+        position: absolute;
+
+        background: #c9a35d;
+    }
+
+    .corner::before {
+        width: 45px;
+        height: 1px;
+    }
+
+    .corner::after {
+        width: 1px;
+        height: 45px;
+    }
+
+    .top-left {
+        top: 25px;
+        left: 25px;
+    }
+
+    .top-right {
+        top: 25px;
+        right: 25px;
+
+        transform: rotate(90deg);
+    }
+
+    .bottom-left {
+        bottom: 25px;
+        left: 25px;
+
+        transform: rotate(-90deg);
+    }
+
+    .bottom-right {
+        bottom: 25px;
+        right: 25px;
+
+        transform: rotate(180deg);
+    }
+
+    /* =================================
+       LEAVING SCREEN
+    ================================= */
+
+    #leaving-overlay {
+        position: fixed;
+
+        inset: 0;
+
+        z-index: 9999;
+
+        display: flex;
+
+        justify-content: center;
+        align-items: center;
+
+        flex-direction: column;
+
+        background:
+            radial-gradient(
+                circle at center,
+                #211e19 0%,
+                #0d0c0a 55%,
+                #050505 100%
+            );
+
+        opacity: 0;
+
+        visibility: hidden;
+
+        pointer-events: none;
+
+        transition:
+            opacity 0.45s ease,
+            visibility 0.45s ease;
+    }
+
+    #leaving-overlay.active {
+        opacity: 1;
+
+        visibility: visible;
+
+        pointer-events: all;
+    }
+
+    .leaving-title {
+        font-family:
+            Georgia,
+            "Times New Roman",
+            serif;
+
+        font-size:
+            clamp(27px, 5vw, 42px);
+
+        font-weight: 400;
+
+        letter-spacing: 2px;
+
+        color: #eee8dc;
+
+        margin-bottom: 25px;
+    }
+
+    .leaving-subtitle {
+        font-family:
+            "Segoe UI",
+            Arial,
+            sans-serif;
+
+        font-size: 11px;
+
+        letter-spacing: 4px;
+
+        text-transform: uppercase;
+
+        color:
+            rgba(210, 195, 165, 0.5);
+
+        margin-bottom: 28px;
+    }
+
+    .loading-line {
+        width:
+            min(260px, 65vw);
+
+        height: 2px;
+
+        background:
+            rgba(201, 163, 93, 0.12);
+
+        overflow: hidden;
+
+        border-radius: 10px;
+    }
+
+    .loading-progress {
+        width: 0%;
+
+        height: 100%;
+
+        background:
+            linear-gradient(
+                90deg,
+                transparent,
+                #c9a35d,
+                #ead6a8
+            );
+
+        box-shadow:
+            0 0 12px
+            rgba(201, 163, 93, 0.45);
+
+        animation:
+            loadingProgress
+            1.4s
+            cubic-bezier(.25, .8, .25, 1)
+            forwards;
+    }
+
+    @keyframes loadingProgress {
+
+        from {
+            width: 0%;
+        }
+
+        to {
+            width: 100%;
+        }
+    }
+
+    /* =================================
+       MOBILE
+    ================================= */
+
+    @media (max-width: 600px) {
+
+        .container {
+            width: 94vw;
+
+            padding:
+                40px 18px;
+        }
+
+        .eyebrow {
+            font-size: 9px;
+            letter-spacing: 3px;
+        }
+
+        h1 {
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .ornament {
+            margin-top: 24px;
+        }
+
+        .back-prompt {
+            margin-top: 35px;
+
+            font-size: 9px;
+
+            letter-spacing: 2px;
+        }
+
+        .corner {
+            width: 30px;
+            height: 30px;
+        }
+
+        .corner::before {
+            width: 30px;
+        }
+
+        .corner::after {
+            height: 30px;
+        }
+
+        .top-left,
+        .top-right {
+            top: 15px;
+        }
+
+        .bottom-left,
+        .bottom-right {
+            bottom: 15px;
+        }
+
+        .top-left,
+        .bottom-left {
+            left: 15px;
+        }
+
+        .top-right,
+        .bottom-right {
+            right: 15px;
+        }
+
+        .footer {
+            bottom: 15px;
+
+            font-size: 8px;
+
+            letter-spacing: 2px;
+        }
+    }
+</style>
+
+
+</head>
+
+<body>
+
+
+<div class="ambient"></div>
+
+<!-- Corner decorations -->
+<div class="corner top-left"></div>
+<div class="corner top-right"></div>
+<div class="corner bottom-left"></div>
+<div class="corner bottom-right"></div>
+
+
+<!-- =================================
+     MAIN COMING SOON PAGE
+================================= -->
+
+<main class="container">
+
+    <div class="king">♔</div>
+
+    <div class="eyebrow">
+        A New Chapter Awaits
+    </div>
+
+    <div class="ornament">
+        <span class="line"></span>
+
+        <span class="diamond"></span>
+
+        <span class="line right"></span>
+    </div>
+
+    <h1>
+        Coming Soon
+    </h1>
+
+    <p class="subtitle">
+        Something new is taking its place on the board.
+        Prepare for the next evolution of your chess experience.
+    </p>
+
+    <div class="back-prompt">
+        <span class="enter-key">ENTER</span>
+        Press Enter to go back
+    </div>
+
+</main>
+
+
+<!-- =================================
+     SUBTLE CHESSBOARD
+================================= -->
+
+<div class="board" id="board"></div>
+
+
+<!-- =================================
+     LEAVING THE CHESSBOARD OVERLAY
+================================= -->
+
+<div id="leaving-overlay">
+
+    <div class="leaving-title">
+        Leaving the chessboard
+    </div>
+
+    <div class="leaving-subtitle">
+        Returning to main menu
+    </div>
+
+    <div class="loading-line">
+        <div class="loading-progress"></div>
+    </div>
+
+</div>
+
+
+<div class="footer">
+    The game continues
+</div>
+
+
+<script>
+
+    /* =================================
+       CREATE SUBTLE CHESSBOARD
+    ================================= */
+
+    const board = document.getElementById("board");
+
+    for (let i = 0; i < 64; i++) {
+
+        const square = document.createElement("div");
+
+        if (Math.floor(i / 8) % 2 === 0) {
+
+            square.style.background =
+                i % 2 === 0
+                    ? "#d6c4a0"
+                    : "#30291e";
+
+        } else {
+
+            square.style.background =
+                i % 2 === 0
+                    ? "#30291e"
+                    : "#d6c4a0";
+        }
+
+        board.appendChild(square);
+    }
+
+
+    /* =================================
+       RETURN TO MAIN MENU
+    ================================= */
+
+    let leaving = false;
+
+    function leaveToMainMenu() {
+
+        if (leaving) return;
+
+        leaving = true;
+
+        const overlay =
+            document.getElementById("leaving-overlay");
+
+        overlay.classList.add("active");
+
+        /*
+         * Give the leaving animation time
+         * to finish before changing pages.
+         */
+
+        setTimeout(() => {
+
+            window.location.href = "menu.html";
+
+        }, 1450);
+    }
+
+
+    /* =================================
+       ENTER KEY
+    ================================= */
+
+    document.addEventListener("keydown", function(event) {
+
+        if (event.key === "Enter") {
+
+            event.preventDefault();
+
+            leaveToMainMenu();
+        }
+
+    });
+
+
+    /* =================================
+       OPTIONAL MOBILE / TOUCH SUPPORT
+    ================================= */
+
+    document.addEventListener("click", function() {
+
+        /*
+         * Keep the page keyboard-focused.
+         * Clicking does NOT leave the page.
+         */
+
+    });
+
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grandmaster Chess Setup</title>
+    
+    <link rel="stylesheet" href="fonts/fonts.css">
+
+    <style>
+        :root {
+            --gold-primary: #e5c07b;
+            --gold-light: #f7e7b4;
+            --gold-dark: #997327;
+            --gold-gradient: linear-gradient(135deg, #fff2c6 0%, #d4af37 50%, #aa7c11 100%);
+            --gold-glow: rgba(212, 175, 55, 0.4);
+            
+            --bg-obsidian: #08090b;
+            --glass-surface: rgba(18, 20, 24, 0.65);
+            --glass-border: rgba(212, 175, 55, 0.18);
+            --glass-highlight: rgba(255, 255, 255, 0.08);
+            
+            --text-main: #f0f2f5;
+            --text-muted: #8a939e;
+            
+            --transition-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            position: relative;
+            min-height: 100vh;
+            background-color: var(--bg-obsidian);
+            background-image: 
+                radial-gradient(ellipse at 80% 20%, rgba(212, 175, 55, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 20% 80%, rgba(13, 17, 23, 0.9) 0%, transparent 60%),
+                url('assets/bg.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            
+            font-family: 'Montserrat', sans-serif;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Subtle chessboard lattice pattern overlay */
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 80px 80px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Atmospheric Vignette & Left Gradient */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: 
+                linear-gradient(90deg, rgba(5,6,8,0.92) 0%, rgba(5,6,8,0.75) 45%, rgba(5,6,8,0.15) 100%),
+                radial-gradient(circle at 10% 50%, rgba(212, 175, 55, 0.05) 0%, transparent 60%);
+            z-index: 2;
+        }
+
+        /* ============================================================
+           CONTROLS PANEL LAYOUT & KEYCAP STYLING
+           ============================================================ */
+        .controls-card-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        /* Elegant custom scrollbar */
+        .controls-card-wrapper::-webkit-scrollbar {
+            width: 5px;
+        }
+        .controls-card-wrapper::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        .controls-card-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(212, 175, 55, 0.4);
+            border-radius: 4px;
+        }        
+        .controls-card-wrapper::-webkit-scrollbar-thumb:hover {
+            background: var(--gold-primary);
+        }
+
+        .controls-group {
+            background: var(--glass-surface);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid rgba(212, 175, 55, 0.4);
+            border-radius: 4px 12px 12px 4px;
+            padding: 16px 20px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.45);
+        }
+
+        .controls-group-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--gold-primary);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+            padding-bottom: 6px;
+        }        
+
+        .controls-table {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            font-size: 0.88rem;
+            color: var(--text-main);
+        }
+
+        .controls-action {
+            color: rgba(240, 242, 245, 0.85);
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+        }
+
+        .controls-inputs {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .key-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 1px 7px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 0.72rem;
+            color: #ffffff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+            letter-spacing: 0;
+        }
+
+        .key-badge.accent {
+            background: rgba(212, 175, 55, 0.18);
+            border-color: rgba(212, 175, 55, 0.55);
+            color: var(--gold-light);
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.25);
+        }        
+
+        .badge-separator {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin: 0 2px;
+        }
+
+        /* ============================================================
+           STAGE / CONTAINER
+           ============================================================ */
+        .stage {
+            position: relative;
+            z-index: 3;
+            margin-left: clamp(4%, 7vw, 10%);
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            max-width: 680px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        /* Ambient Header Branding */
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 0.5rem;
+            opacity: 0.9;
+        }
+
+        .brand-icon {
+            font-size: 1.8rem;
+            color: var(--gold-primary);
+            text-shadow: 0 0 16px var(--gold-glow);
+        }
+
+        .brand-titles {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-main {
+            font-family: 'Cinzel', serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-sub {
+            font-size: 0.65rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .menu-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .menu-panel {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+            perspective: 1000px;
+        }
+
+        .menu-panel.active {
+            display: flex;
+            animation: elegantReveal 0.45s var(--transition-smooth) forwards;
+        }
+
+        @keyframes elegantReveal {
+            from {
+                opacity: 0;
+                transform: translateX(-24px) scale(0.98);
+                filter: blur(4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        /* ============================================================
+           INTERACTIVE CARDS / BUTTONS
+           ============================================================ */
+        .menu-btn,
+        .graphics-option {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 64px;
+            padding: 14px 28px;
+            background: var(--glass-surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid rgba(212, 175, 55, 0.4);
+            border-radius: 4px 12px 12px 4px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 var(--glass-highlight);
+            cursor: pointer;
+            outline: none;
+            text-decoration: none;
+            color: var(--text-main);
+            font-family: 'Cinzel', serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-align: left;
+            transition: all 0.3s var(--transition-smooth);
+            overflow: hidden;
+        }
+
+        /* Subtle Shimmer Ray */
+        .menu-btn::after,
+        .graphics-option::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -120%;
+            width: 80%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+            transform: skewX(-25deg);
+            transition: left 0.75s ease;
+            pointer-events: none;
+        }
+
+        /* Chess Knight Glyph Marker */
+        .menu-btn::before,
+        .graphics-option::before {
+            content: '♞';
+            position: absolute;
+            left: 12px;
+            font-size: 1.25rem;
+            color: var(--gold-light);
+            text-shadow: 0 0 12px var(--gold-glow);
+            opacity: 0;
+            transform: translateX(-10px) scale(0.8);
+            transition: all 0.3s var(--transition-smooth);
+        }
+
+        /* Hover & Focus State */
+        .menu-btn:hover,
+        .menu-btn:focus,
+        .graphics-option:hover,
+        .graphics-option:focus {
+            color: #ffffff;
+            border-color: rgba(212, 175, 55, 0.65);
+            border-left: 4px solid var(--gold-primary);
+            background: linear-gradient(90deg, rgba(212, 175, 55, 0.12) 0%, rgba(25, 28, 35, 0.8) 100%);
+            transform: translateX(12px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.15), inset 0 1px 0 rgba(255,255,255,0.15);
+            padding-left: 40px;
+        }
+
+        .menu-btn:hover::before,
+        .menu-btn:focus::before,
+        .graphics-option:hover::before,
+        .graphics-option:focus::before {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+
+        .menu-btn:hover::after,
+        .menu-btn:focus::after {
+            left: 150%;
+        }
+
+        /* Back Action Styling */
+        .back-btn {
+            margin-top: 10px;
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            border-left-color: rgba(255, 255, 255, 0.2);
+            background: rgba(14, 16, 20, 0.4);
+        }
+
+        .back-btn:hover,
+        .back-btn:focus {
+            color: #ffffff;
+            border-left-color: #ffffff;
+            background: rgba(30, 34, 42, 0.7);
+        }
+
+        .back-btn::before {
+            content: '«';
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 300;
+        }
+
+        /* Setting Information Banner */
+        .setting-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            border-radius: 8px;
+            background: rgba(10, 12, 16, 0.7);
+            border: 1px dashed rgba(212, 175, 55, 0.25);
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        #color-display {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            transition: all 0.3s ease;
+        }
+
+        /* ============================================================
+           GRAPHICS SELECTOR CONTROLS
+           ============================================================ */
+        .graphics-option-label {
+            font-family: 'Cinzel', serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .graphics-selector {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.45);
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .graphics-arrow {
+            background: transparent;
+            border: none;
+            color: var(--gold-primary);
+            font-family: 'Cinzel', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .graphics-arrow:hover,
+        .graphics-arrow:focus {
+            background: rgba(212, 175, 55, 0.2);
+            color: #ffffff;
+            transform: scale(1.15);
+            box-shadow: 0 0 10px var(--gold-glow);
+        }
+
+        .graphics-display {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #ffffff;
+            min-width: 90px;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        /* ============================================================
+           LUXURY GAME LOADING OVERLAY
+           ============================================================ */
+        #game-loading {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            background: radial-gradient(circle at center, #14171d 0%, #08090b 80%, #030405 100%);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #game-loading.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: all;
+            cursor: wait;
+        }
+
+        .loading-frame {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(18, 20, 26, 0.7);
+            padding: 50px 70px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(212, 175, 55, 0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .loading-piece {
+            font-family: 'Cinzel', serif;
+            font-size: 5.5rem;
+            line-height: 1;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 20px var(--gold-glow));
+            animation: loadingPieceFloat 2s ease-in-out infinite, loadingPieceGlow 2s ease-in-out infinite;
+        }
+
+        .loading-title {
+            margin-top: 24px;
+            font-family: 'Cinzel', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .loading-subtitle {
+            margin-top: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 400;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .loading-bar {
+            width: 260px;
+            height: 3px;
+            margin-top: 32px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 99px;
+            position: relative;
+        }
+
+        .loading-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, #d4af37, #fff2c6, transparent);
+            border-radius: 99px;
+            box-shadow: 0 0 12px var(--gold-primary);
+            animation: loadingBarSlide 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes loadingPieceFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        @keyframes loadingPieceGlow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.3)); }
+            50% { filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.6)); }
+        }
+
+        @keyframes loadingBarSlide {
+            0% { transform: translateX(-150%); }
+            100% { transform: translateX(250%); }
+        }
+
+        /* Keyboard Accessibility Indicator */
+        .keyboard-hint {
+            position: fixed;
+            bottom: 24px;
+            left: 8%;
+            z-index: 10;
+            font-size: 0.72rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            opacity: 0.6;
+            display: flex;
+            gap: 16px;
+        }
+        
+        .keyboard-hint span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .key-badge {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 0.65rem;
+        }
+
+        @media (max-width: 768px) {
+            .stage {
+                margin-left: auto;
+                margin-right: auto;
+                padding: 16px;
+                width: 92%;
+            }
+            .menu-btn, .graphics-option {
+                font-size: 1.15rem;
+                min-height: 56px;
+                padding: 12px 20px;
+            }
+            .keyboard-hint {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="overlay"></div>
+
+<div id="game-loading">
+    <div class="loading-frame">
+        <div class="loading-piece">♞</div>
+        <div class="loading-title">LOADING GAME</div>
+        <div class="loading-subtitle">Preparing the chessboard...</div>
+        <div class="loading-bar"></div>
+    </div>
+</div>
+
+<main class="stage">
+    <header class="brand-header">
+        <div class="brand-icon">♛</div>
+        <div class="brand-titles">
+            <span class="brand-main">King's Chess</span>
+            <span class="brand-sub"></span>
+        </div>
+    </header>
+
+    <div class="menu-container">
+
+        <nav id="main-menu" class="menu-panel active">
+            <button class="menu-btn nav-btn" data-target="single-player-menu">
+                Single Player
+            </button>
+
+            <button class="menu-btn action-btn" data-diff="2_Player">
+                2 Players
+            </button>
+
+            <button class="menu-btn multiplayer-btn" id="multiplayer-btn">
+                Multiplayer (Comming Soon)
+            </button>
+
+            <button class="menu-btn nav-btn" data-target="controls-menu">
+                Controls
+            </button>
+
+            <button class="menu-btn nav-btn" data-target="settings-menu">
+                Color
+            </button>
+        </nav>
+
+        <nav id="single-player-menu" class="menu-panel">
+            <button class="menu-btn action-btn" data-diff="Easy">
+                Easy
+            </button>
+
+            <button class="menu-btn action-btn" data-diff="Medium">
+                Medium
+            </button>
+
+            <button class="menu-btn action-btn" data-diff="Hard">
+                Hard
+            </button>
+
+            <button class="menu-btn back-btn nav-btn" data-target="main-menu">
+                Back
+            </button>
+        </nav>
+
+        <div id="controls-menu" class="menu-panel">
+            <div class="controls-card-wrapper">
+
+                <!-- Mouse & Keyboard -->
+                <div class="controls-group">
+                    <div class="controls-group-title">⌨ Mouse & Keyboard</div>
+                    <div class="controls-table">
+                        <div class="controls-row">
+                            <span class="controls-action">Select Piece / Tile</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge accent">Left Click</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Rotate Camera (Look)</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge accent">Hold Right Click</span>
+                                <span class="badge-separator">+</span>
+                                <span class="key-badge">Mouse</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Toggle Free-Roam Camera</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge">Shift</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Free Camera Fly / Move</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge">W</span>
+                                <span class="key-badge">A</span>
+                                <span class="key-badge">S</span>
+                                <span class="key-badge">D</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Camera Ascend / Descend</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge">Space</span>
+                                <span class="badge-separator">/</span>
+                                <span class="key-badge">Ctrl</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Pause Menu & Promotions</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge">Esc</span>
+                                <span class="badge-separator">/</span>
+                                <span class="key-badge">Arrows</span>
+                                <span class="badge-separator">+</span>
+                                <span class="key-badge">Enter</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controller / Gamepad -->
+                <div class="controls-group">
+                    <div class="controls-group-title">🎮 Controller (Gamepad)</div>
+                    <div class="controls-table">
+                        <div class="controls-row">
+                            <span class="controls-action">Move Virtual Cursor</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge accent">Left Stick</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Select / Click Cursor</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge accent">A</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Look / Aim Camera</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge">Right Stick</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Toggle Free-Roam Camera</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge">L3 (Left Stick Click)</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Free-Roam Fly Move</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge">D-Pad</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Camera Ascend / Descend</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge">RT</span>
+                                <span class="badge-separator">/</span>
+                                <span class="key-badge">LT</span>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <span class="controls-action">Pause / Back</span>
+                            <div class="controls-inputs">
+                                <span class="key-badge">B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <button class="menu-btn back-btn nav-btn" data-target="main-menu">
+                Back
+            </button>
+        </div>
+
+        <div id="graphics-menu" class="menu-panel">
+
+            <div class="graphics-option" id="background-setting" tabindex="0" role="button" aria-label="Background graphics setting">
+                <span class="graphics-option-label">Background</span>
+                <div class="graphics-selector">
+                    <button class="graphics-arrow" id="background-left" aria-label="Previous background setting">‹</button>
+                    <span class="graphics-display" id="background-display">Medium</span>
+                    <button class="graphics-arrow" id="background-right" aria-label="Next background setting">›</button>
+                </div>
+            </div>
+
+            <div class="graphics-option" id="pieces-setting" tabindex="0" role="button" aria-label="Chess pieces graphics setting">
+                <span class="graphics-option-label">Chess Pieces</span>
+                <div class="graphics-selector">
+                    <button class="graphics-arrow" id="pieces-left" aria-label="Previous chess pieces setting">‹</button>
+                    <span class="graphics-display" id="pieces-display">Low</span>
+                    <button class="graphics-arrow" id="pieces-right" aria-label="Next chess pieces setting">›</button>
+                </div>
+            </div>
+
+            <div class="graphics-option" id="board-setting" tabindex="0" role="button" aria-label="Board texture graphics setting">
+                <span class="graphics-option-label">Board Texture</span>
+                <div class="graphics-selector">
+                    <button class="graphics-arrow" id="board-left" aria-label="Previous board texture setting">‹</button>
+                    <span class="graphics-display" id="board-display">High</span>
+                    <button class="graphics-arrow" id="board-right" aria-label="Next board texture setting">›</button>
+                </div>
+            </div>
+
+            <button class="menu-btn back-btn nav-btn" data-target="main-menu">
+                Back
+            </button>
+        </div>
+
+        <div id="settings-menu" class="menu-panel">
+            <div class="setting-info">
+                <span>Current Side</span>
+                <strong id="color-display">White</strong>
+            </div>
+
+            <button class="menu-btn" id="toggle-color-btn">
+                Toggle Color
+            </button>
+
+            <button class="menu-btn back-btn nav-btn" data-target="main-menu">
+                Back
+            </button>
+        </div>
+
+    </div>
+</main>
+
+<aside class="keyboard-hint">
+    <span><span class="key-badge">↑</span> <span class="key-badge">↓</span> Navigate</span>
+    <span><span class="key-badge">←</span> <span class="key-badge">→</span> Adjust</span>
+    <span><span class="key-badge">ENTER</span> Select</span>
+</aside>
+
+<script>
+    // ============================================================
+    // PLAYER COLOR
+    // ============================================================
+    let playerColor = localStorage.getItem('savedPlayerColor') || "White";
+
+    // ============================================================
+    // GRAPHICS SETTINGS INITIALIZATION
+    // ============================================================
+    let bg = localStorage.getItem('bg');
+    if (bg === null) {
+        bg = 3;
+        localStorage.setItem('bg', bg);
+    } else {
+        bg = parseInt(bg, 10);
+        if (bg < 1 || bg > 5 || isNaN(bg)) {
+            bg = 3;
+            localStorage.setItem('bg', bg);
+        }
+    }
+
+    let cp = localStorage.getItem('cp');
+    if (cp === null) {
+        cp = 1;
+        localStorage.setItem('cp', cp);
+    } else {
+        cp = parseInt(cp, 10);
+        if (cp < 1 || cp > 3 || isNaN(cp)) {
+            cp = 1;
+            localStorage.setItem('cp', cp);
+        }
+    }
+
+    let bt = localStorage.getItem('bt');
+    if (bt === null) {
+        bt = 2;
+        localStorage.setItem('bt', bt);
+    } else {
+        bt = parseInt(bt, 10);
+        if (bt < 1 || bt > 4 || isNaN(bt)) {
+            bt = 3;
+            localStorage.setItem('bt', bt);
+        }
+    }
+
+    // ============================================================
+    // GRAPHICS MENU ELEMENTS
+    // ============================================================
+    const backgroundSetting = document.getElementById('background-setting');
+    const backgroundDisplay = document.getElementById('background-display');
+    const backgroundLeft = document.getElementById('background-left');
+    const backgroundRight = document.getElementById('background-right');
+
+    const piecesSetting = document.getElementById('pieces-setting');
+    const piecesDisplay = document.getElementById('pieces-display');
+    const piecesLeft = document.getElementById('pieces-left');
+    const piecesRight = document.getElementById('pieces-right');
+
+    const boardSetting = document.getElementById('board-setting');
+    const boardDisplay = document.getElementById('board-display');
+    const boardLeft = document.getElementById('board-left');
+    const boardRight = document.getElementById('board-right');
+
+    // ============================================================
+    // UPDATE DISPLAYS
+    // ============================================================
+    function updateBackgroundDisplay() {
+        const names = ["Very Low", "Low", "Medium", "High", "Ultra"];
+        backgroundDisplay.textContent = names[bg - 1];
+        localStorage.setItem('bg', bg);
+    }
+
+    function updatePiecesDisplay() {
+        const names = ["Low", "High", "Ultra"];
+        piecesDisplay.textContent = names[cp - 1];
+        localStorage.setItem('cp', cp);
+    }
+
+    function updateBoardDisplay() {
+        const names = ["Low", "Medium", "High", "Ultra"];
+        boardDisplay.textContent = names[bt - 1];
+        localStorage.setItem('bt', bt);
+    }
+
+    // ============================================================
+    // SETTING ADJUSTMENT HANDLERS
+    // ============================================================
+    function changeBackground(direction) {
+        bg += direction;
+        if (bg > 5) bg = 1;
+        if (bg < 1) bg = 5;
+        updateBackgroundDisplay();
+        backgroundSetting.focus();
+    }
+
+    function changePieces(direction) {
+        cp += direction;
+        if (cp > 3) cp = 1;
+        if (cp < 1) cp = 3;
+        updatePiecesDisplay();
+        piecesSetting.focus();
+    }
+
+    function changeBoard(direction) {
+        bt += direction;
+        if (bt > 4) bt = 1;
+        if (bt < 1) bt = 4;
+        updateBoardDisplay();
+        boardSetting.focus();
+    }
+
+    // Initialize Graphic Values
+    updateBackgroundDisplay();
+    updatePiecesDisplay();
+    updateBoardDisplay();
+
+    // ============================================================
+    // MOUSE EVENT LISTENERS
+    // ============================================================
+    backgroundLeft.addEventListener('click', (e) => { e.stopPropagation(); changeBackground(-1); });
+    backgroundRight.addEventListener('click', (e) => { e.stopPropagation(); changeBackground(1); });
+    backgroundSetting.addEventListener('click', (e) => {
+        if (e.target !== backgroundLeft && e.target !== backgroundRight) backgroundSetting.focus();
+    });
+
+    piecesLeft.addEventListener('click', (e) => { e.stopPropagation(); changePieces(-1); });
+    piecesRight.addEventListener('click', (e) => { e.stopPropagation(); changePieces(1); });
+    piecesSetting.addEventListener('click', (e) => {
+        if (e.target !== piecesLeft && e.target !== piecesRight) piecesSetting.focus();
+    });
+
+    boardLeft.addEventListener('click', (e) => { e.stopPropagation(); changeBoard(-1); });
+    boardRight.addEventListener('click', (e) => { e.stopPropagation(); changeBoard(1); });
+    boardSetting.addEventListener('click', (e) => {
+        if (e.target !== boardLeft && e.target !== boardRight) boardSetting.focus();
+    });
+
+    // ============================================================
+    // PANEL NAVIGATION LOGIC
+    // ============================================================
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const panels = document.querySelectorAll('.menu-panel');
+
+    navButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            panels.forEach(panel => panel.classList.remove('active'));
+
+            const targetPanel = document.getElementById(targetId);
+            targetPanel.classList.add('active');
+
+            const firstItem = targetPanel.querySelector('.menu-btn, .graphics-option');
+            if (firstItem) {
+                firstItem.focus();
+            }
+        });
+    });
+
+    // ============================================================
+    // COLOR TOGGLE LOGIC
+    // ============================================================
+    const toggleColorBtn = document.getElementById('toggle-color-btn');
+    const colorDisplay = document.getElementById('color-display');
+
+    function syncColorDisplay() {
+        if (playerColor === "Black") {
+            colorDisplay.textContent = "Black";
+            colorDisplay.style.color = "#a0aab8";
+            colorDisplay.style.textShadow = "0 0 12px rgba(160, 170, 184, 0.4)";
+        } else {
+            colorDisplay.textContent = "White";
+            colorDisplay.style.color = "#ffffff";
+            colorDisplay.style.textShadow = "0 0 12px rgba(255, 255, 255, 0.6)";
+        }
+    }
+
+    syncColorDisplay();
+
+    toggleColorBtn.addEventListener('click', () => {
+        playerColor = (playerColor === "White") ? "Black" : "White";
+        syncColorDisplay();
+        localStorage.setItem('savedPlayerColor', playerColor);
+    });
+
+    // ============================================================
+    // GAME LAUNCH LOGIC
+    // ============================================================
+    const actionButtons = document.querySelectorAll('.action-btn');
+    const gameLoading = document.getElementById('game-loading');
+    let gameLaunching = false;
+
+    function launchGame(difficulty) {
+        if (gameLaunching) return;
+        gameLaunching = true;
+
+        const config = {
+            difficulty: difficulty,
+            player: playerColor
+        };
+
+        localStorage.setItem('game.json', JSON.stringify(config));
+
+        gameLoading.classList.add('active');
+
+        if (document.activeElement) {
+            document.activeElement.blur();
+        }
+
+        document.body.style.pointerEvents = 'none';
+        gameLoading.style.pointerEvents = 'all';
+
+        window.location.href = 'game.html';
+    }
+
+    actionButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const difficulty = btn.getAttribute('data-diff');
+            launchGame(difficulty);
+        });
+    });
+
+    // ============================================================
+    // MULTIPLAYER LAUNCH
+    // ============================================================
+    const multiplayerBtn = document.getElementById('multiplayer-btn');
+
+    multiplayerBtn.addEventListener('click', () => {
+        if (gameLaunching) return;
+        gameLaunching = true;
+
+        gameLoading.classList.add('active');
+
+        if (document.activeElement) {
+            document.activeElement.blur();
+        }
+
+        document.body.style.pointerEvents = 'none';
+        gameLoading.style.pointerEvents = 'all';
+
+        window.location.href = 'Multiplayer.html';
+    });
+
+    // ============================================================
+    // KEYBOARD + GAMEPAD NAVIGATION
+    // Supports ALL connected controllers
+    //
+    // Controller:
+    // D-PAD UP/DOWN/LEFT/RIGHT = Navigate
+    // LEFT JOYSTICK             = Navigate
+    // A                         = Enter / Select
+    // B                         = Back
+    // ============================================================
+
+
+    // ------------------------------------------------------------
+    // COMMON NAVIGATION FUNCTIONS
+    // ------------------------------------------------------------
+
+    function getActiveMenuItems() {
+        const activePanel = document.querySelector('.menu-panel.active');
+
+        if (!activePanel) return [];
+
+        return Array.from(
+            activePanel.querySelectorAll('.menu-btn, .graphics-option')
+        );
+    }
+    
+
+    function navigateMenu(direction) {
+
+        const menuItems = getActiveMenuItems();
+
+        if (menuItems.length === 0) return;
+
+        let currentIndex = menuItems.indexOf(document.activeElement);
+
+        // If nothing is focused, start at first item
+        if (currentIndex === -1) {
+            currentIndex = 0;
+            menuItems[currentIndex].focus();
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // LEFT / RIGHT
+        // --------------------------------------------------------
+
+        if (direction === 'left' || direction === 'right') {
+
+            const currentItem = menuItems[currentIndex];
+
+            // Graphics settings
+            if (currentItem === backgroundSetting) {
+                changeBackground(direction === 'left' ? -1 : 1);
+                return;
+            }
+
+            if (currentItem === piecesSetting) {
+                changePieces(direction === 'left' ? -1 : 1);
+                return;
+            }
+
+            if (currentItem === boardSetting) {
+                changeBoard(direction === 'left' ? -1 : 1);
+                return;
+            }
+
+            // Color setting
+            if (currentItem === toggleColorBtn) {
+                toggleColorBtn.click();
+                return;
+            }
+
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // UP
+        // --------------------------------------------------------
+
+        if (direction === 'up') {
+
+            currentIndex =
+                (currentIndex <= 0)
+                    ? menuItems.length - 1
+                    : currentIndex - 1;
+
+            menuItems[currentIndex].focus();
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // DOWN
+        // --------------------------------------------------------
+    
+        if (direction === 'down') {
+
+            currentIndex =
+                (currentIndex >= menuItems.length - 1)
+                    ? 0
+                    : currentIndex + 1;
+
+            menuItems[currentIndex].focus();
+            return;
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // SELECT / ENTER
+    // ------------------------------------------------------------
+
+    function selectCurrentMenuItem() {
+
+        const menuItems = getActiveMenuItems();
+
+        if (menuItems.length === 0) return;
+
+        let currentIndex = menuItems.indexOf(document.activeElement);
+
+        if (currentIndex === -1) {
+            currentIndex = 0;
+            menuItems[currentIndex].focus();
+            return;
+        }
+
+        menuItems[currentIndex].click();
+    }
+
+
+    // ------------------------------------------------------------
+    // BACK BUTTON
+    // ------------------------------------------------------------
+
+    function goBackMenu() {
+
+        const activePanel = document.querySelector('.menu-panel.active');
+
+        if (!activePanel) return;
+
+
+        // If we're already on the main menu,
+        // B does nothing.
+        if (activePanel.id === 'main-menu') {
+            return;
+        }
+
+
+        // Find the Back button in the current panel
+        const backButton = activePanel.querySelector(
+            '.back-btn[data-target]'
+        );
+
+        if (backButton) {
+            backButton.click();
+        }
+    }
+
+
+    // ============================================================
+    // KEYBOARD NAVIGATION
+    // ============================================================
+
+    document.addEventListener('keydown', (event) => {
+
+        const navigationKeys = [
+            'ArrowUp',
+            'ArrowDown',
+            'ArrowLeft',
+            'ArrowRight',
+            'Enter'
+        ];
+
+        if (!navigationKeys.includes(event.key)) return;
+
+        event.preventDefault();
+
+
+        switch (event.key) {
+    
+            case 'ArrowUp':
+                navigateMenu('up');
+                break;
+
+            case 'ArrowDown':
+                navigateMenu('down');
+                break;
+
+            case 'ArrowLeft':
+                navigateMenu('left');
+                break;
+
+            case 'ArrowRight':
+                navigateMenu('right');
+                break;
+
+            case 'Enter':
+                selectCurrentMenuItem();
+                break;
+        }
+    });
+
+
+    // ============================================================
+    // GAMEPAD SUPPORT
+    // ============================================================
+
+    const gamepadState = {};
+
+
+    // ------------------------------------------------------------
+    // Get all connected controllers
+    // ------------------------------------------------------------
+
+    function getConnectedGamepads() {
+
+        return Array.from(navigator.getGamepads())
+            .filter(gamepad => gamepad !== null && gamepad.connected);
+    }
+
+
+    // ------------------------------------------------------------
+    // Deadzone for analog sticks
+    // ------------------------------------------------------------
+
+    const GAMEPAD_DEADZONE = 0.45;
+
+
+    // ------------------------------------------------------------
+    // Prevent held buttons from repeating too quickly
+    // ------------------------------------------------------------
+
+    const GAMEPAD_REPEAT_DELAY = 180;
+
+
+    // ------------------------------------------------------------
+    // Check if a gamepad button is pressed
+    // ------------------------------------------------------------
+
+    function isGamepadButtonPressed(gamepad, index) {
+
+        return (
+            gamepad.buttons[index] &&
+            gamepad.buttons[index].pressed
+        );
+    }
+
+
+    // ------------------------------------------------------------
+    // Detect navigation direction
+    // Uses BOTH:
+    //   D-PAD
+    //   LEFT ANALOG STICK
+    // ------------------------------------------------------------
+
+    function getGamepadDirection(gamepad) {
+
+        let up = false;
+        let down = false;
+        let left = false;
+        let right = false;
+
+
+        // --------------------------------------------------------
+        // Standard Xbox / Gamepad D-PAD
+        //
+        // 12 = D-pad up
+        // 13 = D-pad down
+        // 14 = D-pad left
+        // 15 = D-pad right
+        // --------------------------------------------------------
+
+        if (isGamepadButtonPressed(gamepad, 12)) {
+            up = true;
+        }
+
+        if (isGamepadButtonPressed(gamepad, 13)) {
+            down = true;
+        }
+    
+        if (isGamepadButtonPressed(gamepad, 14)) {
+            left = true;
+        }
+
+        if (isGamepadButtonPressed(gamepad, 15)) {
+            right = true;
+        }
+
+
+        // --------------------------------------------------------
+        // LEFT ANALOG STICK
+        //
+        // Axis 0 = Left / Right
+        // Axis 1 = Up / Down
+        // --------------------------------------------------------
+
+        const axisX =
+            Number.isFinite(gamepad.axes[0])
+                ? gamepad.axes[0]
+                : 0;
+
+        const axisY =
+            Number.isFinite(gamepad.axes[1])
+                ? gamepad.axes[1]
+                : 0;
+
+
+        if (axisY < -GAMEPAD_DEADZONE) {
+            up = true;
+        }
+
+        if (axisY > GAMEPAD_DEADZONE) {
+            down = true;
+        }
+
+        if (axisX < -GAMEPAD_DEADZONE) {
+            left = true;
+        }
+
+        if (axisX > GAMEPAD_DEADZONE) {
+            right = true;
+        }
+
+
+        // --------------------------------------------------------
+        // Give vertical direction priority if both axes somehow
+        // report a direction simultaneously.
+        // --------------------------------------------------------
+
+        if (up) return 'up';
+        if (down) return 'down';
+        if (left) return 'left';
+        if (right) return 'right';
+
+        return null;
+    }
+
+
+    // ============================================================
+    // PROCESS ONE CONTROLLER
+    // ============================================================
+
+    function processGamepad(gamepad) {
+
+        if (!gamepad) return;
+
+
+        // Each controller gets its OWN state.
+        // This is important when 4 controllers are connected.
+    
+        if (!gamepadState[gamepad.index]) {
+
+            gamepadState[gamepad.index] = {
+                lastDirection: null,
+                lastDirectionTime: 0,
+                aWasPressed: false,
+                bWasPressed: false
+            };
+        }
+
+
+        const state = gamepadState[gamepad.index];
+
+        const now = performance.now();
+
+
+        // ========================================================
+        // NAVIGATION
+        // ========================================================
+
+        const direction = getGamepadDirection(gamepad);
+
+
+        if (direction) {
+
+            const directionChanged =
+                state.lastDirection !== direction;
+
+
+            const repeatAllowed =
+                now - state.lastDirectionTime >= GAMEPAD_REPEAT_DELAY;
+
+
+            if (directionChanged || repeatAllowed) {
+
+                navigateMenu(direction);
+
+                state.lastDirection = direction;
+                state.lastDirectionTime = now;
+            }
+
+        } else {
+
+            // Stick/D-pad released
+            state.lastDirection = null;
+        }
+
+
+        // ========================================================
+        // A BUTTON = ENTER
+        //
+        // Standard Xbox:
+        // 0 = A
+        // ========================================================
+
+        const aPressed =
+            isGamepadButtonPressed(gamepad, 0);
+
+
+        if (aPressed && !state.aWasPressed) {
+
+            selectCurrentMenuItem();
+        }
+
+
+        state.aWasPressed = aPressed;
+    
+
+        // ========================================================
+        // B BUTTON = BACK
+        //
+        // Standard Xbox:
+        // 1 = B
+        // ========================================================
+
+        const bPressed =
+            isGamepadButtonPressed(gamepad, 1);
+    
+
+        if (bPressed && !state.bWasPressed) {
+
+            goBackMenu();
+        }
+    
+
+        state.bWasPressed = bPressed;
+    }
+
+
+    // ============================================================
+    // GAMEPAD POLLING LOOP
+    //
+    // navigator.getGamepads() returns ALL connected controllers.
+    // We deliberately process every controller instead of only
+    // controller [0].
+    // ============================================================
+
+    function pollGamepads() {
+
+        const gamepads = getConnectedGamepads();
+
+
+        for (const gamepad of gamepads) {
+    
+            processGamepad(gamepad);
+        }
+
+
+        requestAnimationFrame(pollGamepads);
+    }
+
+
+    // ============================================================
+    // CONTROLLER CONNECTION EVENTS
+    // ============================================================
+
+    window.addEventListener('gamepadconnected', (event) => {
+
+        const gamepad = event.gamepad;
+
+        console.log(
+            'Gamepad connected:',
+            gamepad.id,
+            'Index:',
+            gamepad.index
+        );
+
+
+        // Create state immediately
+        gamepadState[gamepad.index] = {
+            lastDirection: null,
+            lastDirectionTime: 0,
+            aWasPressed: false,
+            bWasPressed: false
+        };
+    });
+
+
+    window.addEventListener('gamepaddisconnected', (event) => {
+
+        const gamepad = event.gamepad;
+
+        console.log(
+            'Gamepad disconnected:',
+            gamepad.id,
+            'Index:',
+            gamepad.index
+        );
+
+
+        delete gamepadState[gamepad.index];
+    });
+
+
+    // ============================================================
+    // START GAMEPAD POLLING
+    // ============================================================
+
+    requestAnimationFrame(pollGamepads);
+
+
+    // ============================================================
+    // INITIAL FOCUS SETUP
+    // ============================================================
+
+    window.addEventListener('load', () => {
+
+        const activePanel =
+            document.querySelector('.menu-panel.active');
+
+        if (!activePanel) return;
+
+
+        const firstItem =
+            activePanel.querySelector(
+                '.menu-btn, .graphics-option'
+            );
+
+
+        if (firstItem) {
+            firstItem.focus();
+        }
+    });
+
+    // ============================================================
+    // INITIAL FOCUS SETUP
+    // ============================================================
+    window.addEventListener('load', () => {
+        const activePanel = document.querySelector('.menu-panel.active');
+        if (activePanel) {
+            const firstItem = activePanel.querySelector('.menu-btn, .graphics-option');
+            if (firstItem) {
+                firstItem.focus();
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
