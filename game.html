@@ -1095,7 +1095,7 @@
         scene.add(fillLight);
 
         // ==========================================
-        // 3. ASSET LOADING (HDR & GLB)
+        // 3. ASSET LOADING (HDR, TEXTURES & GLB)
         // ==========================================
         const assetMap = {};
         const piecesList = ['wp', 'wn', 'wb', 'wr', 'wq', 'wk', 'bp', 'bn', 'bb', 'br', 'bq', 'bk'];
@@ -1111,32 +1111,17 @@
                 // Set solid black background
                 scene.background = new THREE.Color(0x000000);
 
-                // ==========================================
-                // LOAD CHESS PIECE MODELS
-                // ==========================================
+                // 1. Load Chess Piece Models
                 let cp = parseInt(localStorage.getItem('cp'), 10);
                 if (![1, 2, 3].includes(cp)) {
                     cp = 2;
                     localStorage.setItem('cp', cp);
                 }
 
-                let pieceFolder;
-                if (cp === 1) {
-                    pieceFolder = 'assets/Chess Piece 1K';
-                } else if (cp === 2) {
-                    pieceFolder = 'assets/Chess Piece 1K';
-                } else {
-                    pieceFolder = 'assets/Chess Piece 1K';
-                }
-
+                const pieceFolder = 'assets/Chess Piece 1K';
                 const loadPromises = piecesList.map(p =>
                     new Promise((res, rej) =>
-                        gltfLoader.load(
-                            `${pieceFolder}/${p}.glb`,
-                            res,
-                            undefined,
-                            rej
-                        )
+                        gltfLoader.load(`${pieceFolder}/${p}.glb`, res, undefined, rej)
                     )
                 );
 
@@ -1144,7 +1129,6 @@
 
                 loadedGltfs.forEach((gltf, index) => {
                     const model = gltf.scene;
-
                     const box = new THREE.Box3().setFromObject(model);
                     const size = box.getSize(new THREE.Vector3());
                     const center = box.getCenter(new THREE.Vector3());
@@ -1155,27 +1139,33 @@
 
                     const maxDim = Math.max(size.x, size.z);
                     const scale = 0.875 / maxDim;
-
                     model.scale.set(scale, scale, scale);
                 
                     assetMap[piecesList[index]] = model;
                 });
 
+                // 2. Initialize and wait for Board Textures to load via Promise wrappers
+                await initBoardAsync();
+
+                // 3. Setup remaining UI elements once everything is fully ready in memory
+                initMinimap();
+                initPieces();
+
+                // 4. Hide Loading Screen only after ALL assets are fully processed
                 const loadingScreen = document.getElementById('loading-screen');
                 loadingScreen.style.opacity = '0';
                 loadingScreen.style.visibility = 'hidden';
                 loadingScreen.style.pointerEvents = 'none';
-                
-                initBoard();
-                initMinimap();
-                initPieces();
-                if (config.difficulty !== "2_Player" && config.player === "Black") triggerAIMove();
+
+                if (config.difficulty !== "2_Player" && config.player === "Black") {
+                    triggerAIMove();
+                }
 
             } catch (err) {
                 console.error("Failed to load assets:", err);
-                alert("Error loading assets. Ensure GLB files are in the 'assets' folder.");
+                alert("Error loading assets. Ensure GLB files and textures are in their correct folders.");
             }
-        }
+        }        
 
         // ==========================================
         // 4. BOARD, MINIMAP, & LOGIC SYNC
@@ -1210,139 +1200,86 @@
             );
         }
 
-        function initBoard() {
-            const squareGeo = new THREE.BoxGeometry(
-                BOARD_SIZE,
-                0.14,
-                BOARD_SIZE
-            );
+        function initBoardAsync() {
+            return new Promise((resolve) => {
+                const squareGeo = new THREE.BoxGeometry(BOARD_SIZE, 0.14, BOARD_SIZE);
+                const textureLoader = new THREE.TextureLoader();
 
-            // ==========================================
-            // LOAD CHESSBOARD TEXTURES & PBR MAPS
-            // ==========================================
-            const textureLoader = new THREE.TextureLoader();
-
-            let bt = parseInt(localStorage.getItem('bt'), 10);
-            if (![1, 2, 3, 4].includes(bt)) {
-                bt = 2;
-                localStorage.setItem('bt', bt);
-            }
-
-            let boardTextureFolder;
-            if (bt === 1) boardTextureFolder = 'High';
-            else if (bt === 2) boardTextureFolder = 'High';
-            else if (bt === 3) boardTextureFolder = 'High';
-            else boardTextureFolder = 'High';
-
-            const basePath = `assets/Chess Texture/${boardTextureFolder}`;
-
-            function configureTexture(tex, isColor = false) {
-                tex.wrapS = THREE.ClampToEdgeWrapping;
-                tex.wrapT = THREE.ClampToEdgeWrapping;
-                if (isColor) {
-                    tex.encoding = THREE.sRGBEncoding;
+                let bt = parseInt(localStorage.getItem('bt'), 10);
+                if (![1, 2, 3, 4].includes(bt)) {
+                    bt = 2;
+                    localStorage.setItem('bt', bt);
                 }
-                tex.needsUpdate = true;
-                return tex;
-            }
+                const basePath = 'assets/Chess Texture/High';
 
-            const whiteBaseColor = configureTexture(
-                textureLoader.load(`${basePath}/white_basecolor.png`),
-                true
-            );
-            const whiteNormal = configureTexture(
-                textureLoader.load(`${basePath}/white_normal.png`)
-            );
-            const whiteRoughness = configureTexture(
-                textureLoader.load(`${basePath}/white_roughness.png`)
-            );
-            const whiteDisplacement = configureTexture(
-                textureLoader.load(`${basePath}/white_height.png`)
-            );
+                function configureTexture(tex, isColor = false) {
+                    tex.wrapS = THREE.ClampToEdgeWrapping;
+                    tex.wrapT = THREE.ClampToEdgeWrapping;
+                    if (isColor) tex.encoding = THREE.sRGBEncoding;
+                    tex.needsUpdate = true;
+                    return tex;
+                }
 
-            const blackBaseColor = configureTexture(
-                textureLoader.load(`${basePath}/black_basecolor.png`),
-                true
-            );
-            const blackNormal = configureTexture(
-                textureLoader.load(`${basePath}/black_normal.png`)
-            );
-            const blackRoughness = configureTexture(
-                textureLoader.load(`${basePath}/black_roughness.png`)
-            );
-            const blackDisplacement = configureTexture(
-                textureLoader.load(`${basePath}/black_height.png`)
-            );
+                // Load textures concurrently using Three.js manager or direct callbacks
+                let loadedCount = 0;
+                const totalTextures = 8; // 4 for white, 4 for black material
 
-            const lightMat = new THREE.MeshStandardMaterial({
-                map: whiteBaseColor,
-                normalMap: whiteNormal,
-                normalScale: new THREE.Vector2(1.0, 1.0),
-                roughnessMap: whiteRoughness,
-                roughness: 1.0,
-                displacementMap: whiteDisplacement,
-                displacementScale: 0.005,
-                metalness: 0.05
+                function checkAllTexturesLoaded() {
+                    loadedCount++;
+                    if (loadedCount >= totalTextures) {
+                        buildBoardMeshes();
+                        resolve();
+                    }
+                }
+
+                const whiteBaseColor = textureLoader.load(`${basePath}/white_basecolor.png`, (t) => { configureTexture(t, true); checkAllTexturesLoaded(); });
+                const whiteNormal = textureLoader.load(`${basePath}/white_normal.png`, (t) => { configureTexture(t); checkAllTexturesLoaded(); });
+                const whiteRoughness = textureLoader.load(`${basePath}/white_roughness.png`, (t) => { configureTexture(t); checkAllTexturesLoaded(); });
+                const whiteDisplacement = textureLoader.load(`${basePath}/white_height.png`, (t) => { configureTexture(t); checkAllTexturesLoaded(); });
+
+                const blackBaseColor = textureLoader.load(`${basePath}/black_basecolor.png`, (t) => { configureTexture(t, true); checkAllTexturesLoaded(); });
+                const blackNormal = textureLoader.load(`${basePath}/black_normal.png`, (t) => { configureTexture(t); checkAllTexturesLoaded(); });
+                const blackRoughness = textureLoader.load(`${basePath}/black_roughness.png`, (t) => { configureTexture(t); checkAllTexturesLoaded(); });
+                const blackDisplacement = textureLoader.load(`${basePath}/black_height.png`, (t) => { configureTexture(t); checkAllTexturesLoaded(); });
+
+                function buildBoardMeshes() {
+                    const lightMat = new THREE.MeshStandardMaterial({
+                        map: whiteBaseColor, normalMap: whiteNormal, normalScale: new THREE.Vector2(1.0, 1.0),
+                        roughnessMap: whiteRoughness, roughness: 1.0, displacementMap: whiteDisplacement,
+                        displacementScale: 0.005, metalness: 0.05
+                    });
+
+                    const darkMat = new THREE.MeshStandardMaterial({
+                        map: blackBaseColor, normalMap: blackNormal, normalScale: new THREE.Vector2(1.0, 1.0),
+                        roughnessMap: blackRoughness, roughness: 1.0, displacementMap: blackDisplacement,
+                        displacementScale: 0.005, metalness: 0.05
+                    });
+
+                    files.forEach((file, fIndex) => {
+                        ranks.forEach((rank, rIndex) => {
+                            const sqId = file + rank;
+                            const isLight = (fIndex + rIndex) % 2 !== 0;
+                            const mesh = new THREE.Mesh(squareGeo, isLight ? lightMat.clone() : darkMat.clone());
+                            mesh.position.copy(getSquarePosition(sqId));
+                            mesh.userData = { square: sqId, isLight: isLight };
+                            boardGroup.add(mesh);
+                            squareMeshes[sqId] = mesh;
+                        });
+                    });
+
+                    const BORDER_WIDTH = 0.50;
+                    const BORDER_HEIGHT = 0.35;
+                    const OUTER_BOARD_SIZE = BOARD_SIZE * 8 + BORDER_WIDTH * 2;
+                    const boardBaseGeo = new THREE.BoxGeometry(OUTER_BOARD_SIZE, BORDER_HEIGHT, OUTER_BOARD_SIZE);
+                    const boardBaseMat = new THREE.MeshStandardMaterial({
+                        map: blackBaseColor, normalMap: blackNormal, normalScale: new THREE.Vector2(1.0, 1.0),
+                        roughnessMap: blackRoughness, roughness: 1.0, metalness: 0.05
+                    });
+                    const boardBase = new THREE.Mesh(boardBaseGeo, boardBaseMat);
+                    boardBase.position.set(0, BOARD_Y - 0.14, 0);
+                    boardGroup.add(boardBase);
+                }
             });
-
-            const darkMat = new THREE.MeshStandardMaterial({
-                map: blackBaseColor,
-                normalMap: blackNormal,
-                normalScale: new THREE.Vector2(1.0, 1.0),
-                roughnessMap: blackRoughness,
-                roughness: 1.0,
-                displacementMap: blackDisplacement,
-                displacementScale: 0.005,
-                metalness: 0.05
-            });
-
-            files.forEach((file, fIndex) => {
-                ranks.forEach((rank, rIndex) => {
-                    const sqId = file + rank;
-                    const isLight = (fIndex + rIndex) % 2 !== 0;
-
-                    const mesh = new THREE.Mesh(
-                        squareGeo,
-                        isLight ? lightMat.clone() : darkMat.clone()
-                    );
-
-                    mesh.position.copy(getSquarePosition(sqId));
-                    mesh.userData = {
-                        square: sqId,
-                        isLight: isLight
-                    };
-
-                    boardGroup.add(mesh);
-                    squareMeshes[sqId] = mesh;
-                });
-            });
-
-            const BORDER_WIDTH = 0.50;
-            const BORDER_HEIGHT = 0.35;
-            const OUTER_BOARD_SIZE = BOARD_SIZE * 8 + BORDER_WIDTH * 2;
-
-            const boardBaseGeo = new THREE.BoxGeometry(
-                OUTER_BOARD_SIZE,
-                BORDER_HEIGHT,
-                OUTER_BOARD_SIZE
-            );
-
-            const boardBaseMat = new THREE.MeshStandardMaterial({
-                map: blackBaseColor,
-                normalMap: blackNormal,
-                normalScale: new THREE.Vector2(1.0, 1.0),
-                roughnessMap: blackRoughness,
-                roughness: 1.0,
-                metalness: 0.05
-            });
-
-            const boardBase = new THREE.Mesh(
-                boardBaseGeo,
-                boardBaseMat
-            );
-
-            boardBase.position.set(0, BOARD_Y - 0.14, 0);
-            boardGroup.add(boardBase);
         }
 
         function initMinimap() {
