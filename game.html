@@ -792,6 +792,7 @@
         // 1. GAME CONFIGURATION & LOGIC SETUP
         // ==========================================
         let config = { difficulty: "Easy", player: "White" };
+        let sizePercentage = 70;
         try {
             const savedConfig = localStorage.getItem('game.json');
             if (savedConfig) {
@@ -1138,7 +1139,7 @@
                     model.position.y -= box.min.y;
 
                     const maxDim = Math.max(size.x, size.z);
-                    const scale = 0.875 / maxDim;
+                    const scale = (0.875 / maxDim) * (sizePercentage / 100);
                     model.scale.set(scale, scale, scale);
                 
                     assetMap[piecesList[index]] = model;
@@ -1564,7 +1565,7 @@
                 if (activeKingSquare && pieceMeshes[activeKingSquare]) {
                     const kPos = pieceMeshes[activeKingSquare].position;
 
-                    camera.position.set(kPos.x, kPos.y + 2.2, kPos.z);
+                    camera.position.set(kPos.x, kPos.y + (2.2 * (sizePercentage / 100)), kPos.z);
 
                     const playerPOV = config.player === "White" ? 'w' : 'b';
                     cameraYaw = (activeKingSquare === findWhiteKingSquare()) ? 0 : Math.PI;
@@ -1672,7 +1673,7 @@
 
             const kPos = pieceMeshes[activeKingSquare].position;
 
-            camera.position.set(kPos.x, kPos.y + 2.2, kPos.z);
+            camera.position.set(kPos.x, kPos.y + (2.2 * (sizePercentage / 100)), kPos.z);
 
             cameraYaw = (activeKingSquare === findWhiteKingSquare()) ? 0 : Math.PI;
             cameraPitch = -0.3;
@@ -1698,7 +1699,7 @@
             // After that, preserve the player's camera position,
             // yaw and pitch so the camera does not reset every turn.
             if (!cameraInitialized) {
-                camera.position.set(kPos.x, kPos.y + 2.2, kPos.z);
+                camera.position.set(kPos.x, kPos.y + (2.2 * (sizePercentage / 100)), kPos.z);
 
                 cameraYaw = (activeKingSquare === findWhiteKingSquare()) ? 0 : Math.PI;
                 cameraPitch = -0.3;
@@ -1930,11 +1931,7 @@
                         chess.turn() === (config.player === "White" ? 'w' : 'b');
 
                     if (!isSP || isOwnTurn) {
-                        camera.position.set(
-                            anim.mesh.position.x,
-                            anim.mesh.position.y + 2.2,
-                            anim.mesh.position.z
-                        );
+                        camera.position.set(anim.mesh.position.x, anim.mesh.position.y + (2.2 * (sizePercentage / 100)), anim.mesh.position.z);
                     }
                 }
 
@@ -2312,11 +2309,7 @@
                         const kPos =
                             pieceMeshes[activeKingSquare].position;
         
-                        camera.position.set(
-                            kPos.x,
-                            kPos.y + 2.2,
-                            kPos.z
-                        );
+                        camera.position.set(kPos.x, kPos.y + (2.2 * (sizePercentage / 100)), kPos.z);
 
                         cameraYaw =
                             activeKingSquare === findWhiteKingSquare()
